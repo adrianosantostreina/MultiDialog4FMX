@@ -1,0 +1,1 @@
+PlatformFile=C:\Users\Public\Documents\Embarcadero\Studio\23.0\CatalogRepository\AndroidSDK-2525-23.0.55362.2017\platforms\android-35\android.jar
