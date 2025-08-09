@@ -61,11 +61,14 @@ procedure TForm3.Button1Click(Sender: TObject);
 begin
   TMultiDialog4FMX.Dialog
     .SetTitle('Confirmação')
-    .SetMessage('Tem certeza que deseja imprimir a NFC-e nesse exato momento?')
+    //.SetMessage('Quer mesmo sair?')
+    .SetMessage('Confirmar sair do sistema que agora tem uma tela de ' +
+                'imagem maior e pode ser quebrada automaticamente quando ela abrir.' +
+                'Isso é importante.')
     .Buttons
-      .AddButton('Sim', DoClickSim)  // ✅ Passando o método diretamente
-      .AddButton('Não', DoClickNao)
-      .AddButton('Talvez', DoClickTalvez)
+      .AddButton('Sim', DoClickSim, TAlphaColorRec.Green)  // ✅ Passando o método diretamente
+      .AddButton('Não', DoClickNao, TAlphaColorRec.Brown)
+      .AddButton('Cancelar', DoClickTalvez)
     .&End
     .Show;
 end;

@@ -5,6 +5,8 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.UITypes,
+
   FMX.Types;
 
 type
@@ -19,8 +21,8 @@ type
 
   IDialogButtonsBuilder = interface
     ['{B1C2D3E4-F5A6-47B8-9A0C-ABCDEF654321}']
-    function AddButton(const AText: string; const AOnClick: TNotifyEvent): IDialogButtonsBuilder; overload;
-    function AddButton(const AText: string; const AOnTap: TTapEvent): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor  = TAlphaColorRec.Null): IDialogButtonsBuilder; overload;
     function &End: IDialogBuilder;
   end;
 

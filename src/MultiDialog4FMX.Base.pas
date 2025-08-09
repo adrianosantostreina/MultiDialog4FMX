@@ -4,9 +4,12 @@ interface
 
 uses
   MultiDialog4FMX.Interfaces,
+
   FMX.Types,
+
   System.Classes,
   System.SysUtils,
+  System.UITypes,
   System.Generics.Collections;
 
 type
@@ -16,6 +19,7 @@ type
     Text: string;
     ClickHandler: TNotifyEvent;
     TapHandler: TTapEvent;
+    Color : TAlphaColor;
   end;
   TButtonHandlerList = TObjectList<TButtonHandler>;
 
@@ -44,8 +48,8 @@ type
   public
     constructor Create(const AParent: TDialogBase);
 
-    function AddButton(const AText: string; const AOnClick: TNotifyEvent): IDialogButtonsBuilder; overload;
-    function AddButton(const AText: string; const AOnTap: TTapEvent): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder; overload;
     function &End: IDialogBuilder;
   end;
 
@@ -97,27 +101,42 @@ begin
 end;
 
 function TDialogButtonsBuilder.AddButton(const AText: string;
-  const AOnClick: TNotifyEvent): IDialogButtonsBuilder;
+  const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder;
 var
   Rec: TButtonHandler;
 begin
+  if FParent.FButtonHandlers.Count >= 4 then
+    raise Exception.Create('O diálogo suporta no máximo 4 botões.');
+
   Rec := TButtonHandler.Create;
   Rec.Text := AText;
   Rec.ClickHandler := AOnClick;  // ✅ Certifique-se que o handler está sendo atribuído
   Rec.TapHandler := nil;
+
+  //if AColor <> TAlphaColorRec.Null then
+  Rec.Color := AColor;
+
   FParent.FButtonHandlers.Add(Rec);
+
   Result := Self;
 end;
 
-function TDialogButtonsBuilder.AddButton(const AText: string; const AOnTap: TTapEvent): IDialogButtonsBuilder;
+function TDialogButtonsBuilder.AddButton(const AText: string;
+  const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder;
 var
   Rec: TButtonHandler;
 begin
+  if FParent.FButtonHandlers.Count >= 4 then
+    raise Exception.Create('O diálogo suporta no máximo 4 botões.');
+
   Rec := TButtonHandler.Create;  // <-- Esta linha estava faltando
   Rec.Text := AText;
   Rec.ClickHandler := nil;
   Rec.TapHandler := AOnTap;
+  Rec.Color := AColor;
+
   FParent.FButtonHandlers.Add(Rec);
+
   Result := Self;
 end;
 

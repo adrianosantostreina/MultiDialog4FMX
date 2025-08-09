@@ -2,8 +2,8 @@ object Form3: TForm3
   Left = 0
   Top = 0
   Caption = 'Form3'
-  ClientHeight = 480
-  ClientWidth = 640
+  ClientHeight = 750
+  ClientWidth = 400
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
@@ -21,8 +21,8 @@ object Form3: TForm3
     OnClick = Button1Click
   end
   object Label1: TLabel
-    Position.X = 40.000000000000000000
-    Position.Y = 88.000000000000000000
+    Position.X = 32.000000000000000000
+    Position.Y = 92.000000000000000000
     Size.Width = 233.000000000000000000
     Size.Height = 23.000000000000000000
     Size.PlatformDefault = False
