@@ -19,17 +19,13 @@ uses
   MultiDialog4FMX.Android
 {$ENDIF}
 {$IFDEF MSWINDOWS}
-  // Aqui futuramente entraremos com a implementação para Windows
+  // Aqui futuramente entraremos com a implementaÃ§Ã£o para Windows
 {$ENDIF}
   ;
 
 class function TMultiDialog4FMX.Dialog: IDialogBuilder;
 begin
-{$IFDEF ANDROID}
   Result := TAndroidDialog.Create;
-{$ELSE}
-  raise Exception.Create('Plataforma não suportada');
-{$ENDIF}
 end;
 
 end.
