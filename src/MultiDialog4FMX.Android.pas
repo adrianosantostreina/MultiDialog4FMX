@@ -30,7 +30,7 @@ type
 
   TAndroidDialog = class(TDialogBase, IDialogBuilder)
   protected
-    procedure InternalShow; override;
+    procedure InternalShow(const AForm: TCommonCustomForm); override;
   private
     procedure ButtonClick(Sender: TObject);
     procedure ButtonTap(Sender: TObject; const Point: TPointF);
@@ -50,6 +50,7 @@ const
   C_ButtonsHeight = 56;
   C_PaddingHeight = 32;
 var
+  LParent  : TCommonCustomForm;
   LOverlay: TLayout;
   LBgRect: TRectangle;
   LDialogRect: TRectangle;
@@ -62,14 +63,18 @@ var
   LFinalHeight: Single;
   LLWidthButtos: Single;
 begin
+  LParent := ResolveParentForm(AForm);
+
   if FButtonHandlers.Count < 1 then
     raise Exception.Create('O número mínimo de botões é 1.')
   else if FButtonHandlers.Count > 3 then
     raise Exception.Create('O número máximo de botões é 3.');
 
   // LOverlay
-  LOverlay := TLayout.Create(Application.MainForm);
-  LOverlay.Parent := Application.MainForm;
+  //OLD LOverlay := TLayout.Create(Application.MainForm);
+  //OLD LOverlay.Parent := Application.MainForm;
+  LOverlay := TLayout.Create(LParent);
+  LOverlay.Parent := LParent;
   LOverlay.Align := TAlignLayout.Contents;
   LOverlay.HitTest := True;
   LOverlay.BringToFront;

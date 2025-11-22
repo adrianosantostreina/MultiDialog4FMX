@@ -7,7 +7,8 @@ uses
   System.Classes,
   System.UITypes,
 
-  FMX.Types;
+  FMX.Types,
+  FMX.Forms;
 
 type
   IDialogButtonsBuilder = interface;
@@ -16,7 +17,8 @@ type
     function SetTitle(const ATitle: string): IDialogBuilder;
     function SetMessage(const AMessage: string): IDialogBuilder;
     function Buttons: IDialogButtonsBuilder;
-    function Show: IDialogBuilder;
+    function Show: IDialogBuilder; overload;
+    function Show(const AForm: TCommonCustomForm): IDialogBuilder; overload;
   end;
 
   IDialogButtonsBuilder = interface
