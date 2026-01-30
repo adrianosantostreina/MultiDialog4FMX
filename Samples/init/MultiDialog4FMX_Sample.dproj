@@ -8,7 +8,7 @@
         <Platform Condition="'$(Platform)'==''">Android64</Platform>
         <TargetedPlatforms>693395</TargetedPlatforms>
         <AppType>Application</AppType>
-        <MainSource>Proj1.dpr</MainSource>
+        <MainSource>MultiDialog4FMX_Sample.dpr</MainSource>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -117,7 +117,7 @@
         <AUP_READ_PHONE_STATE>true</AUP_READ_PHONE_STATE>
         <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
         <Icns_MainIcns>$(BDS)\bin\delphi_PROJECTICNS.icns</Icns_MainIcns>
-        <SanitizedProjectName>Proj1</SanitizedProjectName>
+        <SanitizedProjectName>MultiDialog4FMX_Sample</SanitizedProjectName>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">
         <DCC_UsePackage>SampleListViewMultiDetailAppearancePackage;fmx;DbxCommonDriver;bindengine;IndyIPCommon;emsclient;FMX_FlexCel_Components;IndyProtocols;dbxcds;FlexCel_Pdf;FireDACSqliteDriver;DbxClientDriver;soapmidas;dbexpress;inet;FMX_FlexCel_Core;FireDACDBXDriver;CustomIPTransport;ZCore;ZParseSql;IndySystem;FlexCel_Render;FireDACCommon;emsserverresource;ZComponent;bindcompdbx;rtl;DBXSqliteDriver;DataSnapFireDAC;FireDAC;xmlrtl;dsnap;DataSnapNativeClient;emshosting;WindowsToast;FireDACCommonDriver;IndyIPClient;emsedge;bindcompfmx;GraphQLHttp;fmxFireDAC;DataSnapCommon;fmxase;dbrtl;FlexCel_XlsAdapter;GraphQLCore;DBXInterBaseDriver;FlexCel_Core;bindcomp;inetstn;IndyCore;RESTBackendComponents;ZPlain;RESTComponents;IndyIPServer;dsnapxml;DataSnapClient;DataSnapProviderClient;emsclientfiredac;FireDACDSDriver;tethering;FiremonkeyNetworkState;ZDbc;CloudService;soaprtl;soapserver;FireDACIBDriver;$(DCC_UsePackage)</DCC_UsePackage>
@@ -373,7 +373,7 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">Proj1.dpr</Source>
+                    <Source Name="MainSource">MultiDialog4FMX_Sample.dpr</Source>
                 </Source>
                 <Excluded_Packages>
                     <Excluded_Packages Name="C:\Users\Public\Documents\Embarcadero\Studio\23.0\Bpl\BossExperts.bpl">Boss Experts</Excluded_Packages>
@@ -720,9 +720,9 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="bin\Proj1.exe" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="bin\MultiDialog4FMX_Sample.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
-                        <RemoteName>Proj1.exe</RemoteName>
+                        <RemoteName>MultiDialog4FMX_Sample.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -770,15 +770,15 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="bin\libProj1.so" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="bin\libMultiDialog4FMX_Sample.so" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Android">
-                        <RemoteName>libProj1.so</RemoteName>
+                        <RemoteName>libMultiDialog4FMX_Sample.so</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="bin\libProj1.so" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="bin\libMultiDialog4FMX_Sample.so" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Android64">
-                        <RemoteName>libProj1.so</RemoteName>
+                        <RemoteName>libMultiDialog4FMX_Sample.so</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
