@@ -11,16 +11,14 @@ implementation
 
 uses
   System.SysUtils, System.TypInfo,
-  MultiDialog4FMX.Android, MultiDialog4FMX.iOS;
+  MultiDialog4FMX.Android;
 
 function CreateDialog: IDialogBuilder;
 begin
 {$IFDEF ANDROID}
-  Result := TAndroidDialogBuilder.Create;
-{$ELSEIF Defined(IOS)}
-  Result := TIosDialogBuilder.Create;
+  Result := TAndroidDialog.Create;
 {$ELSE}
-  raise Exception.Create('Plataforma n„o suportada');
+  raise Exception.Create('Plataforma n√£o suportada');
 {$ENDIF}
 end;
 

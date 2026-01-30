@@ -67,8 +67,8 @@ begin
 
   if FButtonHandlers.Count < 1 then
     raise Exception.Create('O número mínimo de botões é 1.')
-  else if FButtonHandlers.Count > 3 then
-    raise Exception.Create('O número máximo de botões é 3.');
+  else if FButtonHandlers.Count > 4 then
+    raise Exception.Create('O número máximo de botões é 4.');
 
   // LOverlay
   //OLD LOverlay := TLayout.Create(Application.MainForm);
@@ -233,4 +233,3 @@ begin
 end;
 
 end.
-*)

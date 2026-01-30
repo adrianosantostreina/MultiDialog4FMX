@@ -18,7 +18,7 @@ O objetivo é oferecer uma alternativa simples, fluente e multiplataforma para c
       .End
     .Show;
   ```
-- **Suporte multiplataforma** – Implementações específicas para Android e iOS, com possibilidade de extensão para Windows e outras plataformas FMX.
+- **Suporte multiplataforma** – Implementação Android pronta; iOS/Windows em desenvolvimento, com possibilidade de extensão para outras plataformas FMX.
 - **Até 4 botões configuráveis** – Evita poluir a interface com opções em excesso.
 - **Compatível com eventos `OnClick` e `OnTap`**.
 - **Ajuste automático da caixa de diálogo** – O tamanho se adapta dinamicamente à mensagem, com rolagem automática para textos muito grandes.

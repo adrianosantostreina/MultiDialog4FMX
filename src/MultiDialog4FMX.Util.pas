@@ -3,8 +3,7 @@ unit MultiDialog4FMX.Util;
 interface
 
 uses
-  MultiDialog4FMX.Interfaces,
-  MultiDialog4FMX.Base;
+  MultiDialog4FMX.Interfaces;
 
 type
   TMultiDialog4FMX = class
@@ -15,22 +14,11 @@ type
 implementation
 
 uses
-{$IFDEF ANDROID}
-  MultiDialog4FMX.Android
-{$ENDIF}
-{$IFDEF MSWINDOWS}
-  // Aqui futuramente entraremos com a implementação para Windows
-{$ENDIF}
-  ;
+  MultiDialog4FMX.Factory;
 
 class function TMultiDialog4FMX.Dialog: IDialogBuilder;
 begin
-{$IFDEF ANDROID}
-  Result := TAndroidDialog.Create;
-{$ELSE}
-  raise Exception.Create('Plataforma não suportada');
-{$ENDIF}
+  Result := CreateDialog;
 end;
 
 end.
-
