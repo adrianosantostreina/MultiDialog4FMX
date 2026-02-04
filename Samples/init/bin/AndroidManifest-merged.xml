@@ -2,7 +2,7 @@
 <!-- BEGIN_INCLUDE(manifest) -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.embarcadero.Proj1"
+    package="com.embarcadero.MultiDialog4FMX_Sample"
     android:installLocation="auto"
     android:versionCode="1"
     android:versionName="1.0.0" >
@@ -36,7 +36,7 @@
         android:extractNativeLibs="true"
         android:hardwareAccelerated="true"
         android:icon="@drawable/ic_launcher"
-        android:label="Proj1"
+        android:label="MultiDialog4FMX_Sample"
         android:largeHeap="False"
         android:persistent="False"
         android:requestLegacyExternalStorage="true"
@@ -67,13 +67,13 @@
             android:name="com.embarcadero.firemonkey.FMXNativeActivity"
             android:configChanges="orientation|keyboard|keyboardHidden|screenSize|screenLayout|uiMode"
             android:exported="true"
-            android:label="Proj1"
+            android:label="MultiDialog4FMX_Sample"
             android:launchMode="singleTask" >
 
             <!-- Tell NativeActivity the name of our .so -->
             <meta-data
                 android:name="android.app.lib_name"
-                android:value="Proj1" />
+                android:value="MultiDialog4FMX_Sample" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
