@@ -28,9 +28,11 @@ type
     BtnTest3: TButton;
     BtnTest2: TButton;
     BtnTest1: TButton;
+    Button2: TButton;
     procedure Button1Click(Sender: TObject);
     procedure Button1Tap(Sender: TObject; const Point: TPointF);
-    
+    procedure Button2Click(Sender: TObject);
+
     // Handlers para os botões de teste (Published)
     procedure OnTest1Click(Sender: TObject);
     procedure OnTest2Click(Sender: TObject);
@@ -91,6 +93,36 @@ begin
   //
 end;
 
+procedure TForm3.Button2Click(Sender: TObject);
+begin
+  TMultiDialog4FMX.Dialog
+    //.SetTitle('Erro')
+    .SetMessage
+    (
+    'O sistema não conseguiu acessar o '+
+    'banco de dados remoto que fica no endereço ' +
+    'configurado no arquivo de configuração de config.ini. ' +
+    'Esse arquivo pode ser encontrado no diretório do sistema.' +
+    'Caso não encontre, entre em contato com o administrador.' +
+    #13#10 +
+    '-------------' +
+    #13#10 +
+    'O sistema não conseguiu acessar o '+
+    'banco de dados remoto que fica no endereço ' +
+    'configurado no arquivo de configuração de config.ini. ' +
+    'Esse arquivo pode ser encontrado no diretório do sistema.' +
+    'Caso não encontre, entre em contato com o administrador.'
+    )
+    // Em Portrait < 600px, o botão "Pular" deve ficar full width abaixo
+    .Buttons
+      .AddButton('Ruim', DoClickSim, TAlphaColorRec.Red)    // ✅ Nova sintaxe limpa
+      .AddButton('Bom', TAlphaColorRec.Orange)  // ✅ Nova sintaxe limpa
+      .AddButton('Ótimo', TAlphaColorRec.Green) // ✅ Nova sintaxe limpa
+      .AddButton('Pular Avaliação', TAlphaColorRec.Lightgray) // ✅ Nova sintaxe limpa
+    .&End
+    .Show;
+end;
+
 procedure TForm3.FormCreate(Sender: TObject);
 begin
   //
@@ -113,9 +145,10 @@ begin
   TMultiDialog4FMX.Dialog
     .SetTitle('Confirmação')
     .SetMessage('Deseja excluir este registro?')
+    .SetCancelable(True)
     .Buttons
       .AddButton('Sim', DoClickSim, TAlphaColorRec.Red)
-      .AddButton('Não', DoClickNao)
+      .AddButton('Não')
     .&End
     .Show;
 end;
@@ -140,7 +173,7 @@ begin
     .SetMessage('Qual sua nota para o atendimento?')
     // Em Portrait < 600px, o botão "Pular" deve ficar full width abaixo
     .Buttons
-      .AddButton('Ruim', TAlphaColorRec.Red)    // ✅ Nova sintaxe limpa
+      .AddButton('Ruim', DoClickSim, TAlphaColorRec.Red)    // ✅ Nova sintaxe limpa
       .AddButton('Bom', TAlphaColorRec.Orange)  // ✅ Nova sintaxe limpa
       .AddButton('Ótimo', TAlphaColorRec.Green) // ✅ Nova sintaxe limpa
       .AddButton('Pular Avaliação', TAlphaColorRec.Lightgray) // ✅ Nova sintaxe limpa

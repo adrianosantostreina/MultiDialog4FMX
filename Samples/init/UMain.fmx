@@ -37,7 +37,7 @@ object Form3: TForm3
     Size.Height = 44.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 4
-    Text = 'Teste: 3 Botoes'
+    Text = 'Teste: 4 Botoes'
     TextSettings.Trimming = None
     OnClick = OnTest3Click
   end
@@ -58,7 +58,7 @@ object Form3: TForm3
     Size.Width = 360.000000000000000000
     Size.Height = 44.000000000000000000
     Size.PlatformDefault = False
-    TabOrder = 6
+    TabOrder = 7
     Text = 'Teste: 1 Botao'
     TextSettings.Trimming = None
     OnClick = OnTest1Click
@@ -78,11 +78,22 @@ object Form3: TForm3
   end
   object Label1: TLabel
     Position.X = 20.000000000000000000
-    Position.Y = 300.000000000000000000
+    Position.Y = 452.000000000000000000
     Size.Width = 360.000000000000000000
     Size.Height = 23.000000000000000000
     Size.PlatformDefault = False
     Text = 'Label1'
     TabOrder = 1
+  end
+  object Button2: TButton
+    Position.X = 20.000000000000000000
+    Position.Y = 286.000000000000000000
+    Size.Width = 360.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 6
+    Text = 'Teste: 5 Texto Grande'
+    TextSettings.Trimming = None
+    OnClick = Button2Click
   end
 end

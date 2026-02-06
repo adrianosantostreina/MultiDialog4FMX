@@ -216,11 +216,12 @@ begin
       raise;
     end;
 
-    if Assigned(LRec.ClickHandler) then
-      LBtn.OnClick := ButtonClick;
-
+    // Se tiver TapHandler, usa OnTap.
+    // Caso contrário (tem ClickHandler OU não tem nada/nil), usa OnClick para garantir fechamento.
     if Assigned(LRec.TapHandler) then
-      LBtn.OnTap := ButtonTap;
+      LBtn.OnTap := ButtonTap
+    else
+      LBtn.OnClick := ButtonClick;
   end;
 
   // Altura final ajustada
