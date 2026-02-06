@@ -1,26 +1,33 @@
-unit MultiDialog4FMX.Factory;
+﻿unit MultiDialog4FMX.Factory;
 
 interface
 
 uses
   MultiDialog4FMX.Interfaces;
 
+// Factory function para criação de diálogos específicos por plataforma
 function CreateDialog: IDialogBuilder;
 
 implementation
 
 uses
-  System.SysUtils, System.TypInfo,
-  MultiDialog4FMX.Android, MultiDialog4FMX.iOS;
+{$IFDEF ANDROID}
+  MultiDialog4FMX.Android;
+{$ELSEIF DEFINED(IOS)}
+  MultiDialog4FMX.iOS;
+{$ELSE}
+  System.SysUtils;
+{$ENDIF}
 
 function CreateDialog: IDialogBuilder;
 begin
 {$IFDEF ANDROID}
-  Result := TAndroidDialogBuilder.Create;
-{$ELSEIF Defined(IOS)}
-  Result := TIosDialogBuilder.Create;
+  Result := TAndroidDialog.Create;
+{$ELSEIF DEFINED(IOS)}
+  raise Exception.Create('iOS não implementado ainda');
+  // Result := TiOSDialog.Create;
 {$ELSE}
-  raise Exception.Create('Plataforma n�o suportada');
+  raise Exception.Create('Plataforma não suportada');
 {$ENDIF}
 end;
 

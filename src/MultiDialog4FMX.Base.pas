@@ -20,7 +20,9 @@ type
     Text: string;
     ClickHandler: TNotifyEvent;
     TapHandler: TTapEvent;
-    Color : TAlphaColor;
+    AnonymousHandler: TProc;
+    Color: TAlphaColor;
+    StyleLookup: string;
   end;
   TButtonHandlerList = TObjectList<TButtonHandler>;
 
@@ -28,6 +30,7 @@ type
   protected
     FTitle: string;
     FMessage: string;
+    FCancelable: Boolean;
     FButtonHandlers: TButtonHandlerList;
     // Cada plataforma implementa sua exibição
     procedure InternalShow(const AForm: TCommonCustomForm); virtual; abstract;
@@ -39,6 +42,7 @@ type
     // IDialogBuilder
     function SetTitle(const ATitle: string): IDialogBuilder;
     function SetMessage(const AMessage: string): IDialogBuilder;
+    function SetCancelable(const Value: Boolean): IDialogBuilder;
     function Buttons: IDialogButtonsBuilder;
     function Show: IDialogBuilder; overload;
     function Show(const AForm: TCommonCustomForm): IDialogBuilder; overload;
@@ -51,8 +55,10 @@ type
   public
     constructor Create(const AParent: TDialogBase);
 
-    function AddButton(const AText: string; const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder; overload;
-    function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnSimpleClick: TProc; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
     function &End: IDialogBuilder;
   end;
 
@@ -95,6 +101,12 @@ begin
   Result := Self;
 end;
 
+function TDialogBase.SetCancelable(const Value: Boolean): IDialogBuilder;
+begin
+  FCancelable := Value;
+  Result := Self;
+end;
+
 function TDialogBase.Buttons: IDialogButtonsBuilder;
 begin
   Result := TDialogButtonsBuilder.Create(Self);
@@ -121,7 +133,7 @@ begin
 end;
 
 function TDialogButtonsBuilder.AddButton(const AText: string;
-  const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder;
+  const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder;
 var
   Rec: TButtonHandler;
 begin
@@ -130,11 +142,12 @@ begin
 
   Rec := TButtonHandler.Create;
   Rec.Text := AText;
-  Rec.ClickHandler := AOnClick;  // ✅ Certifique-se que o handler está sendo atribuído
+  Rec.ClickHandler := AOnClick;
   Rec.TapHandler := nil;
+  Rec.AnonymousHandler := nil;
 
-  //if AColor <> TAlphaColorRec.Null then
   Rec.Color := AColor;
+  Rec.StyleLookup := AStyleLookup;
 
   FParent.FButtonHandlers.Add(Rec);
 
@@ -142,18 +155,49 @@ begin
 end;
 
 function TDialogButtonsBuilder.AddButton(const AText: string;
-  const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder;
+  const AOnSimpleClick: TProc; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder;
 var
   Rec: TButtonHandler;
 begin
   if FParent.FButtonHandlers.Count >= 4 then
     raise Exception.Create('O diálogo suporta no máximo 4 botões.');
 
-  Rec := TButtonHandler.Create;  // <-- Esta linha estava faltando
+  Rec := TButtonHandler.Create;
+  Rec.Text := AText;
+  Rec.ClickHandler := nil;
+  Rec.TapHandler := nil;
+  Rec.AnonymousHandler := AOnSimpleClick;
+
+  Rec.Color := AColor;
+  Rec.StyleLookup := AStyleLookup;
+
+  FParent.FButtonHandlers.Add(Rec);
+
+  Result := Self;
+end;
+
+function TDialogButtonsBuilder.AddButton(const AText: string; const AColor: TAlphaColor; const AStyleLookup: string): IDialogButtonsBuilder;
+begin
+  // Redireciona para o overload principal passando nil no evento
+  Result := AddButton(AText, TNotifyEvent(nil), AColor, AStyleLookup);
+end;
+
+function TDialogButtonsBuilder.AddButton(const AText: string;
+  const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder;
+var
+  Rec: TButtonHandler;
+begin
+  if FParent.FButtonHandlers.Count >= 4 then
+    raise Exception.Create('O diálogo suporta no máximo 4 botões.');
+
+  Rec := TButtonHandler.Create;
   Rec.Text := AText;
   Rec.ClickHandler := nil;
   Rec.TapHandler := AOnTap;
+  Rec.AnonymousHandler := nil;
+  
   Rec.Color := AColor;
+  Rec.StyleLookup := AStyleLookup;
 
   FParent.FButtonHandlers.Add(Rec);
 
