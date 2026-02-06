@@ -27,6 +27,7 @@ type
   protected
     FTitle: string;
     FMessage: string;
+    FCancelable: Boolean;
     FButtonHandlers: TButtonHandlerList;
     // Cada plataforma implementa sua exibição
     procedure InternalShow; virtual; abstract;
@@ -37,6 +38,7 @@ type
     // IDialogBuilder
     function SetTitle(const ATitle: string): IDialogBuilder;
     function SetMessage(const AMessage: string): IDialogBuilder;
+    function SetCancelable(const Value: Boolean): IDialogBuilder;
     function Buttons: IDialogButtonsBuilder;
     function Show: IDialogBuilder;
   end;
@@ -49,6 +51,7 @@ type
     constructor Create(const AParent: TDialogBase);
 
     function AddButton(const AText: string; const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder; overload;
     function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder; overload;
     function &End: IDialogBuilder;
   end;
@@ -81,6 +84,12 @@ begin
   Result := Self;
 end;
 
+function TDialogBase.SetCancelable(const Value: Boolean): IDialogBuilder;
+begin
+  FCancelable := Value;
+  Result := Self;
+end;
+
 function TDialogBase.Buttons: IDialogButtonsBuilder;
 begin
   Result := TDialogButtonsBuilder.Create(Self);
@@ -110,15 +119,20 @@ begin
 
   Rec := TButtonHandler.Create;
   Rec.Text := AText;
-  Rec.ClickHandler := AOnClick;  // ✅ Certifique-se que o handler está sendo atribuído
+  Rec.ClickHandler := AOnClick;
   Rec.TapHandler := nil;
 
-  //if AColor <> TAlphaColorRec.Null then
   Rec.Color := AColor;
 
   FParent.FButtonHandlers.Add(Rec);
 
   Result := Self;
+end;
+
+function TDialogButtonsBuilder.AddButton(const AText: string; const AColor: TAlphaColor): IDialogButtonsBuilder;
+begin
+  // Redireciona para o overload principal passando nil no evento
+  Result := AddButton(AText, TNotifyEvent(nil), AColor);
 end;
 
 function TDialogButtonsBuilder.AddButton(const AText: string;
@@ -129,7 +143,7 @@ begin
   if FParent.FButtonHandlers.Count >= 4 then
     raise Exception.Create('O diálogo suporta no máximo 4 botões.');
 
-  Rec := TButtonHandler.Create;  // <-- Esta linha estava faltando
+  Rec := TButtonHandler.Create;
   Rec.Text := AText;
   Rec.ClickHandler := nil;
   Rec.TapHandler := AOnTap;

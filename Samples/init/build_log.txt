@@ -1,0 +1,32 @@
+Microsoft (R) VersÆo do Mecanismo de Compila‡Æo 4.8.9221.0
+[Microsoft .NET Framework, VersÆo 4.0.30319.42000]
+Copyright (C) Microsoft Corporation. Todos os direitos reservados.
+
+Compila‡Æo de 05/02/2026 21:06:16 iniciada.
+Project "d:\2.2 GitHub Adriano Santos\MultiDialog4FMX\Samples\init\Proj1.dproj" on node 1 (Build target(s)).
+BuildVersionResource:
+  C:\Program Files (x86)\Embarcadero\Studio\37.0\bin64\cgrc.exe -c65001 -= resinator.exe "Proj1.vrc" -foProj1.res 
+  CodeGear Resource Compiler/Binder
+  Version 1.2.3 Copyright (c) 2008-2025 Embarcadero Technologies Inc.
+  
+  Deleting file "Proj1.vrc".
+  del "Proj1.vrc"
+_PasCoreCompile:
+  C:\Program Files (x86)\Embarcadero\Studio\37.0\bin\dccaarm64.exe -$O- -$R+ -$Q+ --no-config -B -Q -TX.so -AGenerics.Collections=System.Generics.Collections;Generics.Defaults=System.Generics.Defaults -DDEBUG;;FRAMEWORK_FMX -E.\bin -I"c:\program files (x86)\embarcadero\studio\37.0\lib\Android64\debug\EN";"c:\program files (x86)\embarcadero\studio\37.0\lib\Android64\debug";"c:\program files (x86)\embarcadero\studio\37.0\lib\Android64\release\EN";..\..\src;"c:\program files (x86)\embarcadero\studio\37.0\lib\Android64\Release";C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp\Android64 -LEC:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl\Android64 -LNC:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp\Android64 -NU.\dcu -NSSystem;Xml;Data;Datasnap;Web;Soap; -O..\..\src;"c:\program files (x86)\embarcadero\studio\37.0\lib\Android64\Release";C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp\Android64 -R"c:\program files (x86)\embarcadero\studio\37.0\lib\Android64\release\EN";..\..\src;"c:\program files (x86)\embarcadero\studio\37.0\lib\Android64\Release";C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp\Android64 -U"c:\program files (x86)\embarcadero\studio\37.0\lib\Android64\debug\EN";"c:\program files (x86)\embarcadero\studio\37.0\lib\Android64\debug";"c:\program files (x86)\embarcadero\studio\37.0\lib\Android64\release\EN";..\..\src;"c:\program files (x86)\embarcadero\studio\37.0\lib\Android64\Release";C:\Users\Public\Documents\Embarcadero\Studio\37.0\Dcp\Android64 --compiler-rt:C:\Users\Public\Documents\Embarcadero\Studio\37.0\CatalogRepository\AndroidSDK-37.0.57242.3601\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\lib\clang\18\lib\linux\libclang_rt.builtins-aarch64-android.a --libpath:C:\Users\Public\Documents\Embarcadero\Studio\37.0\CatalogRepository\AndroidSDK-37.0.57242.3601\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\sysroot\usr\lib\aarch64-linux-android\23;C:\Users\Public\Documents\Embarcadero\Studio\37.0\CatalogRepository\AndroidSDK-37.0.57242.3601\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\sysroot\usr\lib\aarch64-linux-android --linker:C:\Users\Public\Documents\Embarcadero\Studio\37.0\CatalogRepository\AndroidSDK-37.0.57242.3601\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin\ld.lld.exe -V -VN -NO.\dcu  Proj1.dpr   
+  Embarcadero Delphi for Android ARM64 compiler version 37.0
+  Copyright (c) 1983,2025 Embarcadero Technologies, Inc.
+D:\2.2 GitHub Adriano Santos\MultiDialog4FMX\src\MultiDialog4FMX.Android.pas(260): warning W1000: Symbol 'DisposeOf' is deprecated: 'Use Free instead' [d:\2.2 GitHub Adriano Santos\MultiDialog4FMX\Samples\init\Proj1.dproj]
+  Linker command line: C:\Users\Public\Documents\Embarcadero\Studio\37.0\CatalogRepository\AndroidSDK-37.0.57242.3601\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin\ld.lld.exe -o .\\bin\\libProj1.so --gc-sections --version-script .\\bin\\Proj1.vsr -shared --no-undefined -z noexecstack -z relro -z now --eh-frame-hdr -m aarch64linux -z max-page-size=16384 --no-rosegment -L ..\\..\\src -L "c:\\program files (x86)\\embarcadero\\studio\\37.0\\lib\\Android64\\Release" -L C:\\Users\\Public\\Documents\\Embarcadero\\Studio\\37.0\\Dcp\\Android64 -L C:\\Users\\Public\\Documents\\Embarcadero\\Studio\\37.0\\CatalogRepository\\AndroidSDK-37.0.57242.3601\\ndk\\27.1.12297006\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\aarch64-linux-android\\23 -L C:\\Users\\Public\\Documents\\Embarcadero\\Studio\\37.0\\CatalogRepository\\AndroidSDK-37.0.57242.3601\\ndk\\27.1.12297006\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\aarch64-linux-android C:\\Users\\Public\\Documents\\Embarcadero\\Studio\\37.0\\CatalogRepository\\AndroidSDK-37.0.57242.3601\\ndk\\27.1.12297006\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\aarch64-linux-android\\23\\crtbegin_so.o @.\\bin\\Proj1.lnk -ldl -lc -lunwind -lm -landroid -lrtlhelper -lpcre -llog -ljnigraphics -lEGL -lGLESv2 C:\\Users\\Public\\Documents\\Embarcadero\\Studio\\37.0\\CatalogRepository\\AndroidSDK-37.0.57242.3601\\ndk\\27.1.12297006\\toolchains\\llvm\\prebuilt\\windows-x86_64\\lib\\clang\\18\\lib\\linux\\libclang_rt.builtins-aarch64-android.a -rpath $ORIGIN C:\\Users\\Public\\Documents\\Embarcadero\\Studio\\37.0\\CatalogRepository\\AndroidSDK-37.0.57242.3601\\ndk\\27.1.12297006\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\aarch64-linux-android\\23\\crtend_so.o
+  814 lines, 2.02 seconds.
+Done Building Project "d:\2.2 GitHub Adriano Santos\MultiDialog4FMX\Samples\init\Proj1.dproj" (Build target(s)).
+
+Compila‡Æo com ˆxito.
+
+"d:\2.2 GitHub Adriano Santos\MultiDialog4FMX\Samples\init\Proj1.dproj" (Build destino) (1) ->
+(_PasCoreCompile destino) -> 
+  D:\2.2 GitHub Adriano Santos\MultiDialog4FMX\src\MultiDialog4FMX.Android.pas(260): warning W1000: Symbol 'DisposeOf' is deprecated: 'Use Free instead' [d:\2.2 GitHub Adriano Santos\MultiDialog4FMX\Samples\init\Proj1.dproj]
+
+    1 Aviso(s)
+    0 Erro(s)
+
+Tempo Decorrido 00:00:02.69

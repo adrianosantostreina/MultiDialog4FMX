@@ -36,7 +36,7 @@ O MultiDialog4FMX foi criado para preencher essa lacuna, permitindo criar diálo
 ## 📌 **Roadmap**
 
 - ✅ Implementação Android  
-- 🚧 Implementação iOS  
+- 🚧 Implementação iOS (Código existente, mas comentado/pendente de validação de SafeArea)
 - 🚧 Implementação Windows  
 - 🔹 Suporte a temas e estilos personalizados  
 - 🔹 Animações de entrada e saída da caixa de diálogo

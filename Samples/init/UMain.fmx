@@ -8,22 +8,78 @@ object Form3: TForm3
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
   DesignerMasterStyle = 3
+  object BtnTestNull: TButton
+    Position.X = 20.000000000000000000
+    Position.Y = 20.000000000000000000
+    Size.Width = 360.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 2
+    Text = 'Teste: 2 Botoes (Sem Evento)'
+    TextSettings.Trimming = None
+    OnClick = OnTestNullClick
+  end
+  object BtnTest4: TButton
+    Position.X = 20.000000000000000000
+    Position.Y = 74.000000000000000000
+    Size.Width = 360.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 3
+    Text = 'Teste: 4 Botoes (Responsivo)'
+    TextSettings.Trimming = None
+    OnClick = OnTest4Click
+  end
+  object BtnTest3: TButton
+    Position.X = 20.000000000000000000
+    Position.Y = 128.000000000000000000
+    Size.Width = 360.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 4
+    Text = 'Teste: 3 Botoes'
+    TextSettings.Trimming = None
+    OnClick = OnTest3Click
+  end
+  object BtnTest2: TButton
+    Position.X = 20.000000000000000000
+    Position.Y = 182.000000000000000000
+    Size.Width = 360.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 5
+    Text = 'Teste: 2 Botoes'
+    TextSettings.Trimming = None
+    OnClick = OnTest2Click
+  end
+  object BtnTest1: TButton
+    Position.X = 20.000000000000000000
+    Position.Y = 234.000000000000000000
+    Size.Width = 360.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 6
+    Text = 'Teste: 1 Botao'
+    TextSettings.Trimming = None
+    OnClick = OnTest1Click
+  end
   object Button1: TButton
     OnTap = Button1Tap
     Position.X = 32.000000000000000000
-    Position.Y = 24.000000000000000000
+    Position.Y = 600.000000000000000000
     Size.Width = 89.000000000000000000
     Size.Height = 44.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 0
-    Text = 'Button1'
+    Text = 'Original'
     TextSettings.Trimming = None
+    Visible = False
     OnClick = Button1Click
   end
   object Label1: TLabel
-    Position.X = 32.000000000000000000
-    Position.Y = 92.000000000000000000
-    Size.Width = 233.000000000000000000
+    Position.X = 20.000000000000000000
+    Position.Y = 300.000000000000000000
+    Size.Width = 360.000000000000000000
     Size.Height = 23.000000000000000000
     Size.PlatformDefault = False
     Text = 'Label1'
