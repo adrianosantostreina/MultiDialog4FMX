@@ -6,6 +6,7 @@ uses
   MultiDialog4FMX.Interfaces,
 
   FMX.Types,
+  FMX.Forms,
 
   System.Classes,
   System.SysUtils,
@@ -32,7 +33,8 @@ type
     FCancelable: Boolean;
     FButtonHandlers: TButtonHandlerList;
     // Cada plataforma implementa sua exibição
-    procedure InternalShow; virtual; abstract;
+    procedure InternalShow(const AForm: TCommonCustomForm); virtual; abstract;
+    function ResolveParentForm(const AForm: TCommonCustomForm): TCommonCustomForm;
   public
     constructor Create;
     destructor Destroy; override;
@@ -42,7 +44,8 @@ type
     function SetMessage(const AMessage: string): IDialogBuilder;
     function SetCancelable(const Value: Boolean): IDialogBuilder;
     function Buttons: IDialogButtonsBuilder;
-    function Show: IDialogBuilder;
+    function Show: IDialogBuilder; overload;
+    function Show(const AForm: TCommonCustomForm): IDialogBuilder; overload;
   end;
 
   // Builder aninhado de botões
@@ -62,6 +65,17 @@ type
 implementation
 
 { TDialogBase }
+
+function TDialogBase.ResolveParentForm(const AForm: TCommonCustomForm): TCommonCustomForm;
+begin
+  if Assigned(AForm) then
+    Exit(AForm);
+
+  if Assigned(Screen.ActiveForm) then
+    Exit(Screen.ActiveForm);
+
+  Result := Application.MainForm;
+end;
 
 constructor TDialogBase.Create;
 begin
@@ -100,7 +114,13 @@ end;
 
 function TDialogBase.Show: IDialogBuilder;
 begin
-  InternalShow;
+  InternalShow(ResolveParentForm(nil));
+  Result := Self;
+end;
+
+function TDialogBase.Show(const AForm: TCommonCustomForm): IDialogBuilder;
+begin
+  InternalShow(ResolveParentForm(AForm));
   Result := Self;
 end;
 

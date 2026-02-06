@@ -7,7 +7,8 @@ uses
   System.Classes,
   System.UITypes,
 
-  FMX.Types;
+  FMX.Types,
+  FMX.Forms;
 
 type
   IDialogButtonsBuilder = interface;
@@ -36,11 +37,15 @@ type
     /// Acessa o construtor de botões.
     /// </summary>
     function Buttons: IDialogButtonsBuilder;
-    
     /// <summary>
     /// Exibe o diálogo.
     /// </summary>
-    function Show: IDialogBuilder; overload; // Mantive overload original se houver outro method
+    function Show: IDialogBuilder; overload;
+    
+    /// <summary>
+    /// Exibe o diálogo em um formulário específico.
+    /// </summary>
+    function Show(const AForm: TCommonCustomForm): IDialogBuilder; overload;
   end;
 
   /// <summary>

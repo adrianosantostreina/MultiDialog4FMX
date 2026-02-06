@@ -31,7 +31,7 @@ type
 
   TAndroidDialog = class(TDialogBase, IDialogBuilder)
   protected
-    procedure InternalShow; override;
+    procedure InternalShow(const AForm: TCommonCustomForm); override;
   private
     procedure ButtonClick(Sender: TObject);
     procedure ButtonTap(Sender: TObject; const Point: TPointF);
@@ -44,7 +44,7 @@ implementation
 
 { TAndroidDialog }
 
-procedure TAndroidDialog.InternalShow;
+procedure TAndroidDialog.InternalShow(const AForm: TCommonCustomForm);
 const
   C_MaxDialogHeight = 400;
   C_MinDialogHeight = 200;
@@ -53,6 +53,7 @@ const
   C_ButtonsHeight = 56;
   C_PaddingHeight = 32;
 var
+  LParent  : TCommonCustomForm;
   LOverlay: TLayout;
   LBgRect: TRectangle;
   LDialogRect: TRectangle;
@@ -64,13 +65,20 @@ var
   LMsgHeight: Single;
   LFinalHeight: Single;
   LWidthButtons: Single;
-  LParent: TCommonCustomForm;
+
 begin
+  LParent := ResolveParentForm(AForm);
+
   if FButtonHandlers.Count < 1 then
     raise Exception.Create('O número mínimo de botões é 1.');
 
-  // Resolve parent form com fallback
-  LParent := Application.MainForm;
+  // Validação extra de máximo (embora o Builder já trate)
+  if FButtonHandlers.Count > 4 then
+    raise Exception.Create('O número máximo de botões é 4.');
+
+  // Resolve parent form (já resolvido via ResolveParentForm no início do método)
+  if not Assigned(LParent) then
+    LParent := Application.MainForm;
   if not Assigned(LParent) then
     LParent := Screen.ActiveForm;
   if not Assigned(LParent) then
