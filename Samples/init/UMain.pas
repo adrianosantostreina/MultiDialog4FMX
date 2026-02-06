@@ -29,9 +29,15 @@ type
     BtnTest2: TButton;
     BtnTest1: TButton;
     Button2: TButton;
+    Button3: TButton;
+    Button4: TButton;
+    Button5: TButton;
+    styGeralStyle: TStyleBook;
     procedure Button1Click(Sender: TObject);
     procedure Button1Tap(Sender: TObject; const Point: TPointF);
     procedure Button2Click(Sender: TObject);
+    procedure Button3Click(Sender: TObject);
+    procedure Button4Click(Sender: TObject);
 
     // Handlers para os botões de teste (Published)
     procedure OnTest1Click(Sender: TObject);
@@ -123,6 +129,39 @@ begin
     .Show;
 end;
 
+procedure TForm3.Button3Click(Sender: TObject);
+begin
+  TMultiDialog4FMX.Dialog
+    .SetTitle('Erro')
+    .SetMessage('Mensagem com método anônimo. ')
+    // Em Portrait < 600px, o botão "Pular" deve ficar full width abaixo
+    .Buttons
+      .AddButton(
+      'Ruim',
+      procedure()
+      begin
+        Label1.Text := 'Funcionou';
+      end
+      , TAlphaColorRec.Red)    // ✅ Nova sintaxe limpa
+      .AddButton('Bom', TAlphaColorRec.Orange)  // ✅ Nova sintaxe limpa
+      .AddButton('Ótimo', TAlphaColorRec.Green) // ✅ Nova sintaxe limpa
+      .AddButton('Pular Avaliação', TAlphaColorRec.Lightgray) // ✅ Nova sintaxe limpa
+    .&End
+    .Show;
+end;
+
+procedure TForm3.Button4Click(Sender: TObject);
+begin
+  TMultiDialog4FMX.Dialog
+    .SetTitle('Aviso Simples')
+    .SetMessage('Operação concluída com sucesso.')
+    .SetCancelable(True)
+    .Buttons
+      .AddButton('OK', TAlphaColorRec.Null, 'BtnComumGreen') // ✅ Nova sintaxe limpa sem evento
+    .&End
+    .Show;
+end;
+
 procedure TForm3.FormCreate(Sender: TObject);
 begin
   //
@@ -173,7 +212,12 @@ begin
     .SetMessage('Qual sua nota para o atendimento?')
     // Em Portrait < 600px, o botão "Pular" deve ficar full width abaixo
     .Buttons
-      .AddButton('Ruim', DoClickSim, TAlphaColorRec.Red)    // ✅ Nova sintaxe limpa
+      .AddButton('Ruim', 
+        procedure
+        begin
+          Label1.Text := 'Avaliação: Ruim (via Anônimo)';
+        end,
+        TAlphaColorRec.Red, 'trasparentstyle')    // ✅ Teste Anônimo + Style
       .AddButton('Bom', TAlphaColorRec.Orange)  // ✅ Nova sintaxe limpa
       .AddButton('Ótimo', TAlphaColorRec.Green) // ✅ Nova sintaxe limpa
       .AddButton('Pular Avaliação', TAlphaColorRec.Lightgray) // ✅ Nova sintaxe limpa

@@ -25,6 +25,7 @@ type
   public
     ClickHandler: TNotifyEvent;
     TapHandler: TTapEvent;
+    AnonymousHandler: TProc;
     Overlay: TLayout;
   end;
 
@@ -82,7 +83,7 @@ begin
     var LHasEvent := False;
     for LRec in FButtonHandlers do
     begin
-      if Assigned(LRec.ClickHandler) or Assigned(LRec.TapHandler) then
+      if Assigned(LRec.ClickHandler) or Assigned(LRec.TapHandler) or Assigned(LRec.AnonymousHandler) then
       begin
         LHasEvent := True;
         Break;
@@ -175,9 +176,14 @@ begin
     // 3 primeiros botões dividem a largura
     LWidthButtons := (C_DialogWidth / 3) - 16; 
   end
+  else if FButtonHandlers.Count = 1 then
+  begin
+     // Se for apenas 1 botão, ele pode ocupar quase toda a largura
+     LWidthButtons := C_DialogWidth - 32;
+  end
   else
   begin
-    // Lógica padrão
+    // Lógica padrão para 2 ou 3 botões (ou 4 em landscape)
     LWidthButtons := (C_DialogWidth / FButtonHandlers.Count) - 24;
   end;
 
@@ -202,13 +208,28 @@ begin
       LBtn.Width := LWidthButtons;
     end;
 
-    LBtn.Margins.Right := 8;
+    // Ajuste de margem: Apenas adiciona margem direita se NÃO for o último botão
+    if I < FButtonHandlers.Count - 1 then
+      LBtn.Margins.Right := 8
+    else
+      LBtn.Margins.Right := 0;
+
     LBtn.TintColor := LRec.Color;
+
+    // StyleLookup
+    if LRec.StyleLookup <> '' then
+    begin
+      LBtn.StyleLookup := LRec.StyleLookup;
+      // IMPORTANTE: Para usar a cor da fonte do Estilo, precisamos INCLUIR FontColor no StyledSettings.
+      // O código anterior removia tudo ou resetava errado. Vamos garantir que o estilo mande.
+      LBtn.StyledSettings := [TStyledSetting.Family, TStyledSetting.Style, TStyledSetting.FontColor, TStyledSetting.Size]; 
+    end;
 
     LHandlerObj := TButtonHandlerObj.Create;
     try
       LHandlerObj.ClickHandler := LRec.ClickHandler;
       LHandlerObj.TapHandler := LRec.TapHandler;
+      LHandlerObj.AnonymousHandler := LRec.AnonymousHandler;
       LHandlerObj.Overlay := LOverlay;
       LBtn.TagObject := LHandlerObj;
     except
@@ -292,6 +313,9 @@ begin
     Obj := TButton(Sender).TagObject as TButtonHandlerObj;
     if Assigned(Obj.ClickHandler) then
       Obj.ClickHandler(Sender);
+      
+    if Assigned(Obj.AnonymousHandler) then
+      Obj.AnonymousHandler();
 
     CloseDialog(Obj.Overlay);
 

@@ -52,17 +52,22 @@ type
     /// <summary>
     /// Adiciona um botão com evento OnClick padrão.
     /// </summary>
-    function AddButton(const AText: string; const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
     
+    /// <summary>
+    /// Adiciona um botão com método anônimo (TProc).
+    /// </summary>
+    function AddButton(const AText: string; const AOnSimpleClick: TProc; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
+
     /// <summary>
     /// Adiciona um botão SEM evento (apenas fecha o diálogo).
     /// </summary>
-    function AddButton(const AText: string; const AColor: TAlphaColor = TAlphaColorRec.Null): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
 
     /// <summary>
     /// Adiciona um botão com evento OnTap (Toque).
     /// </summary>
-    function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor  = TAlphaColorRec.Null): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor  = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
     
     /// <summary>
     /// Finaliza a adição de botões e retorna ao builder principal.
