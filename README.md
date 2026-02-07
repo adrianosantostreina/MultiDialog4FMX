@@ -117,7 +117,10 @@ TMultiDialog4FMX.Dialog
   .SetType(TMultiDialogType.mdtWarning) // Sets the warning icon
   .SetTitle('Exit')
   .SetMessage('Are you sure you want to quit without saving?')
-  .Buttons.AddButton('Yes').AddButton('No').&End
+  .Buttons
+    .AddButton('Yes')
+    .AddButton('No')
+  .&End
   .Show;
 ```
 
