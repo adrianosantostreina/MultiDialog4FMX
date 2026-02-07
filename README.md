@@ -108,6 +108,13 @@ TMultiDialog4FMX.Dialog
 1. Add the Global search path to the `src` folder.
 2. Add `MultiDialog4FMX.Util` to your `uses` clause in the form where you want to call the dialog.
 
+## 🧪 Testing
+
+To run the unit tests:
+1. Open `Tests\MultiDialog4FMX.Tests.dproj` in Delphi.
+2. Run using **TestInsight** (View > TestInsight) or simply Compile and Run (F9) to view the console output.
+3. See [walkthrough.md](Tests/walkthrough.md) for detailed testing documentation.
+
 ---
 
 ## 📜 License

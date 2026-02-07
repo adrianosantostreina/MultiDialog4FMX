@@ -32,12 +32,12 @@ type
   TAndroidDialog = class(TDialogBase, IDialogBuilder)
   protected
     procedure InternalShow(const AForm: TCommonCustomForm); override;
+    function CalculateMessageHeight(const AText: string; const AWidth: Single; const AFont: TFont): Single;
   private
     procedure ButtonClick(Sender: TObject);
     procedure ButtonTap(Sender: TObject; const Point: TPointF);
     procedure OnBackgroundClick(Sender: TObject);
     procedure CloseDialog(AOverlay: TLayout);
-    function CalculateMessageHeight(const AText: string; const AWidth: Single; const AFont: TFont): Single;
   end;
 
 implementation
