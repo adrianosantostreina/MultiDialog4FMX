@@ -32,6 +32,7 @@ type
     FMessage: string;
     FCancelable: Boolean;
     FButtonHandlers: TButtonHandlerList;
+    FMsgType: TMultiDialogType;
     // Cada plataforma implementa sua exibição
     procedure InternalShow(const AForm: TCommonCustomForm); virtual; abstract;
     function ResolveParentForm(const AForm: TCommonCustomForm): TCommonCustomForm;
@@ -40,6 +41,7 @@ type
     destructor Destroy; override;
 
     // IDialogBuilder
+    function SetType(AType: TMultiDialogType): IDialogBuilder;
     function SetTitle(const ATitle: string): IDialogBuilder;
     function SetMessage(const AMessage: string): IDialogBuilder;
     function SetCancelable(const Value: Boolean): IDialogBuilder;
@@ -87,6 +89,12 @@ destructor TDialogBase.Destroy;
 begin
   FButtonHandlers.Free;
   inherited;
+end;
+
+function TDialogBase.SetType(AType: TMultiDialogType): IDialogBuilder;
+begin
+  FMsgType := AType;
+  Result := Self;
 end;
 
 function TDialogBase.SetTitle(const ATitle: string): IDialogBuilder;

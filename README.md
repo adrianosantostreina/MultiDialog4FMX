@@ -101,6 +101,29 @@ TMultiDialog4FMX.Dialog
   .Show;
 ```
 
+### 6. Icons & Dialog Types
+Use `.SetType` to display standard icons. The dialog automatically adjusts the layout to show the icon alongside the message.
+
+| Type | Computed Icon | Usage |
+|------|---------------|-------|
+| `mdtWarning` | ⚠️ Warning | Critical alerts or irreversible actions. |
+| `mdtError` | ❌ Error | System failures or blocking issues. |
+| `mdtInformation` | ℹ️ Info | General information. |
+| `mdtQuestion` | ❓ Question | User confirmations. |
+| `mdtConfirmation` | ✅ Success | Successful operations. |
+
+```delphi
+TMultiDialog4FMX.Dialog
+  .SetType(TMultiDialogType.mdtWarning) // Sets the warning icon
+  .SetTitle('Exit')
+  .SetMessage('Are you sure you want to quit without saving?')
+  .Buttons.AddButton('Yes').AddButton('No').&End
+  .Show;
+```
+
+### 7. Scrollable Content
+If the message text is too long to fit on the screen (exceeding 90% of device height), the dialog automatically enables a **vertical scrollbar** for the content area, keeping the Title and Buttons fixed. No extra configuration is needed!
+
 ---
 
 ## 📌 Installation
