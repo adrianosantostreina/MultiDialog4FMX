@@ -45,6 +45,9 @@ type
     procedure TestShow_CallsInternalShow;
     
     [Test]
+    procedure TestSetType_StoresValue;
+
+    [Test]
     procedure TestShow_ReturnsDialogBuilder;
   end;
 
@@ -122,6 +125,12 @@ begin
   FDialog.Reset;
   FDialog.Buttons.AddButton('OK').&End.Show;
   Assert.IsTrue(FDialog.ShowCalled);
+end;
+
+procedure TDialogBuilderTests.TestSetType_StoresValue;
+begin
+  FDialog.SetType(TMultiDialogType.mdtWarning);
+  Assert.AreEqual(TMultiDialogType.mdtWarning, FDialog.MsgType);
 end;
 
 procedure TDialogBuilderTests.TestShow_ReturnsDialogBuilder;

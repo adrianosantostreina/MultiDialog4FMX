@@ -101,6 +101,29 @@ TMultiDialog4FMX.Dialog
   .Show;
 ```
 
+### 6. Ícones e Tipos de Diálogo
+Use `.SetType` para exibir ícones padrão. O diálogo ajusta automaticamente o layout para mostrar o ícone ao lado da mensagem.
+
+| Tipo | Ícone Computado | Uso |
+|------|-----------------|-----|
+| `mdtWarning` | ⚠️ Alerta | Alertas críticos ou ações irreversíveis. |
+| `mdtError` | ❌ Erro | Falhas do sistema ou problemas bloqueantes. |
+| `mdtInformation` | ℹ️ Info | Informações gerais. |
+| `mdtQuestion` | ❓ Pergunta | Confirmações do usuário. |
+| `mdtConfirmation` | ✅ Sucesso | Operações bem-sucedidas. |
+
+```delphi
+TMultiDialog4FMX.Dialog
+  .SetType(TMultiDialogType.mdtWarning) // Define o ícone de alerta
+  .SetTitle('Sair')
+  .SetMessage('Deseja realmente sair sem salvar?')
+  .Buttons.AddButton('Sim').AddButton('Não').&End
+  .Show;
+```
+
+### 7. Conteúdo com Rolagem
+Se o texto da mensagem for muito grande para caber na tela (excedendo 90% da altura do dispositivo), o diálogo habilita automaticamente uma **barra de rolagem vertical** para a área de conteúdo, mantendo o Título e os Botões fixos. Nenhuma configuração extra é necessária!
+
 ---
 
 ## 📌 Instalação

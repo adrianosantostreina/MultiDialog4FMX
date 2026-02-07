@@ -11,6 +11,8 @@ uses
   FMX.Forms;
 
 type
+  TMultiDialogType = (mdtCustom, mdtWarning, mdtError, mdtInformation, mdtConfirmation, mdtQuestion);
+
   IDialogButtonsBuilder = interface;
   /// <summary>
   /// Interface para construção fluente de diálogos.
@@ -18,6 +20,11 @@ type
   IDialogBuilder = interface
     ['{A1B2C3D4-E5F6-47A8-9B0C-ABCDEF123456}']
     
+    /// <summary>
+    /// Define o tipo do diálogo (ícone padrão).
+    /// </summary>
+    function SetType(AType: TMultiDialogType): IDialogBuilder;
+
     /// <summary>
     /// Define o título do diálogo.
     /// </summary>

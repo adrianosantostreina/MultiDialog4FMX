@@ -4,6 +4,7 @@ interface
 
 uses
   MultiDialog4FMX.Util,
+  MultiDialog4FMX.Interfaces,
 
   System.SysUtils,
   System.Types,
@@ -33,11 +34,14 @@ type
     Button4: TButton;
     Button5: TButton;
     styGeralStyle: TStyleBook;
+    Button6: TButton;
     procedure Button1Click(Sender: TObject);
     procedure Button1Tap(Sender: TObject; const Point: TPointF);
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure Button4Click(Sender: TObject);
+    procedure Button5Click(Sender: TObject);
+    procedure Button6Click(Sender: TObject);
 
     // Handlers para os botões de teste (Published)
     procedure OnTest1Click(Sender: TObject);
@@ -102,7 +106,7 @@ end;
 procedure TForm3.Button2Click(Sender: TObject);
 begin
   TMultiDialog4FMX.Dialog
-    //.SetTitle('Erro')
+    .SetTitle('Erro')
     .SetMessage
     (
     'O sistema não conseguiu acessar o '+
@@ -158,6 +162,56 @@ begin
     .SetCancelable(True)
     .Buttons
       .AddButton('OK', TAlphaColorRec.Null, 'BtnComumGreen') // ✅ Nova sintaxe limpa sem evento
+    .&End
+    .Show;
+end;
+
+procedure TForm3.Button5Click(Sender: TObject);
+begin
+  TMultiDialog4FMX.Dialog
+    .SetType(TMultiDialogType.mdtWarning) // Define o ícone
+    .SetTitle('Saída')
+    .SetMessage('Confirma saída do sistema?')
+    .SetCancelable(True)
+    .Buttons
+      .AddButton('Sim',
+        procedure()
+        begin
+          Label1.Text := 'Clicou em SIM.';
+        end
+      ,TAlphaColorRec.Null, 'BtnComumGreen') // ✅ Nova sintaxe limpa sem evento
+      .AddButton('Não', TAlphaColorRec.Null, 'BtnComumRed') // ✅ Nova sintaxe limpa sem evento
+    .&End
+    .Show;
+end;
+
+procedure TForm3.Button6Click(Sender: TObject);
+begin
+  TMultiDialog4FMX.Dialog
+    .SetTitle('Erro')
+    .SetType(TMultiDialogType.mdtError)
+    .SetMessage
+    (
+    'O sistema não conseguiu acessar o '+
+    'banco de dados remoto que fica no endereço ' +
+    'configurado no arquivo de configuração de config.ini. ' +
+    'Esse arquivo pode ser encontrado no diretório do sistema.' +
+    'Caso não encontre, entre em contato com o administrador.' +
+    #13#10 +
+    '-------------' +
+    #13#10 +
+    'O sistema não conseguiu acessar o '+
+    'banco de dados remoto que fica no endereço ' +
+    'configurado no arquivo de configuração de config.ini. ' +
+    'Esse arquivo pode ser encontrado no diretório do sistema.' +
+    'Caso não encontre, entre em contato com o administrador.'
+    )
+    // Em Portrait < 600px, o botão "Pular" deve ficar full width abaixo
+    .Buttons
+      .AddButton('Ruim', DoClickSim, TAlphaColorRec.Red)    // ✅ Nova sintaxe limpa
+      .AddButton('Bom', TAlphaColorRec.Orange)  // ✅ Nova sintaxe limpa
+      .AddButton('Ótimo', TAlphaColorRec.Green) // ✅ Nova sintaxe limpa
+      .AddButton('Pular Avaliação', TAlphaColorRec.Lightgray) // ✅ Nova sintaxe limpa
     .&End
     .Show;
 end;

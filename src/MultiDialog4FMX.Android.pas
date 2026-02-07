@@ -45,26 +45,44 @@ implementation
 { TAndroidDialog }
 
 procedure TAndroidDialog.InternalShow(const AForm: TCommonCustomForm);
+  // Constants for Icon SVG Data
 const
+  SVG_WARNING = 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z';
+  SVG_ERROR = 'M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z';
+  SVG_INFO = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z';
+  SVG_QUESTION = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z';
+
+  // Layout Constants
   C_MaxDialogHeight = 400;
   C_MinDialogHeight = 200;
   C_DialogWidth = 300;
   C_TitleHeight = 40;
   C_ButtonsHeight = 56;
   C_PaddingHeight = 32;
+  C_IconSize = 40;
 var
   LParent  : TCommonCustomForm;
   LOverlay: TLayout;
   LBgRect: TRectangle;
   LDialogRect: TRectangle;
+  
+  // Containers
+  LBodyLayout: TLayout;
+
+  // Components
   LLblTitle, LblMsg: TLabel;
+  LIconPath: TPath;
   LBtnLayout: TFlowLayout;
   LRec: TButtonHandler;
   LBtn: TButton;
   LHandlerObj: TButtonHandlerObj;
+  
+  // Metrics
   LMsgHeight: Single;
   LFinalHeight: Single;
   LWidthButtons: Single;
+  LRecalcMsgWidth: Single;
+  LIconWidthUsed: Single;
 
 begin
   LParent := ResolveParentForm(AForm);
@@ -128,21 +146,16 @@ begin
   LDialogRect.Stroke.Kind := TBrushKind.None;
   LDialogRect.Padding.Rect := RectF(4, 4, 4, 4);
 
-  // Mensagem
-  LblMsg := TLabel.Create(LDialogRect);
-  LblMsg.Parent := LDialogRect;
-  LblMsg.Align := TAlignLayout.Top;
-  LblMsg.WordWrap := True;
-  LblMsg.Margins.Rect := RectF(16, 4, 8, 8);
-  LblMsg.Text := FMessage;
-  LblMsg.VertTextAlign := TTextAlign.Leading;
-  LblMsg.TextSettings.Font.Size := 14;
-  LblMsg.StyledSettings := [TStyledSetting.Style];
+  // 1. Layout dos botões (Bottom) - Criação Primeiro para garantir Dock no Rodapé
+  LBtnLayout := TFlowLayout.Create(LDialogRect);
+  LBtnLayout.Parent := LDialogRect;
+  LBtnLayout.Align := TAlignLayout.Bottom; // Fixado no rodapé
+  LBtnLayout.Height := C_ButtonsHeight;
+  LBtnLayout.Justify := TFlowJustify.Center;
+  LBtnLayout.JustifyLastLine := TFlowJustify.Center;
+  LBtnLayout.Margins.Rect := RectF(4, 0, 4, 4); // Margem inferior 4 (do padding do form)
 
-  LMsgHeight := CalculateMessageHeight(FMessage, C_DialogWidth - 32, LblMsg.TextSettings.Font);
-  LblMsg.Height := LMsgHeight;
-
-  // Título
+  // 2. Título (Top)
   if FTitle <> EmptyStr then
   begin
     LLblTitle := TLabel.Create(LDialogRect);
@@ -150,12 +163,109 @@ begin
     LLblTitle.Align := TAlignLayout.Top;
     LLblTitle.Text := FTitle;
     LLblTitle.TextSettings.Font.Style := [TFontStyle.fsBold];
-    LLblTitle.Margins.Rect := RectF(16, 4, 4, 8);
+    LLblTitle.Margins.Rect := RectF(16, 12, 16, 4); // Margem superior
     LLblTitle.Height := C_TitleHeight;
-    LLblTitle.TextSettings.Font.Size := 14;
-    LLblTitle.StyledSettings := [TStyledSetting.Style];
-    LLblTitle.BringToFront;
+    LLblTitle.TextSettings.Font.Size := 16;
+    LLblTitle.StyledSettings := [TStyledSetting.Style, TStyledSetting.FontColor];
+    LLblTitle.VertTextAlign := TTextAlign.Center;
   end;
+
+  // 3. Corpo (Client) - Usando ScrollBox para permitir rolagem se necessário
+  var LScrollBox := TVertScrollBox.Create(LDialogRect);
+  LScrollBox.Parent := LDialogRect;
+  LScrollBox.Align := TAlignLayout.Client;
+  LScrollBox.Margins.Rect := RectF(0, 8, 0, 8); // Margens externas do scroll
+  LScrollBox.ShowScrollBars := True;
+
+  // Layout interno que vai crescer o quanto precisar (Conteúdo)
+  LBodyLayout := TLayout.Create(LScrollBox);
+  LBodyLayout.Parent := LScrollBox;
+  LBodyLayout.Align := TAlignLayout.Top; // Ocupa topo do ScrollBox e cresce
+  LBodyLayout.Margins.Rect := RectF(16, 0, 16, 0); // Margens internas do conteúdo
+  
+  LIconWidthUsed := 0;
+
+  // Render Icon if not custom
+  if FMsgType <> TMultiDialogType.mdtCustom then
+  begin
+    // Container do ícone (Left)
+    var LIconContainer := TLayout.Create(LBodyLayout);
+    LIconContainer.Parent := LBodyLayout;
+    LIconContainer.Align := TAlignLayout.Left;
+    LIconContainer.Width := C_IconSize;
+    LIconContainer.Margins.Right := 16;
+    
+    LIconPath := TPath.Create(LIconContainer);
+    LIconPath.Parent := LIconContainer;
+    LIconPath.Align := TAlignLayout.Top;
+    LIconPath.Height := C_IconSize;
+    LIconPath.Width := C_IconSize;
+    // LIconPath.Data.WrapMode := TWrapMode.Fit;
+    LIconPath.Stroke.Kind := TBrushKind.None;
+    
+    // Choose Path Data and Color
+    case FMsgType of
+      mdtWarning:
+      begin
+        LIconPath.Data.Data := SVG_WARNING;
+        LIconPath.Fill.Color := TAlphaColorRec.Gold;
+      end;
+      mdtError:
+      begin
+        LIconPath.Data.Data := SVG_ERROR;
+        LIconPath.Fill.Color := TAlphaColorRec.Red;
+      end;
+      mdtInformation:
+      begin
+         LIconPath.Data.Data := SVG_INFO;
+         LIconPath.Fill.Color := TAlphaColorRec.Dodgerblue;
+      end;
+      mdtConfirmation, mdtQuestion:
+      begin
+         LIconPath.Data.Data := SVG_QUESTION;
+         LIconPath.Fill.Color := TAlphaColorRec.Limegreen;
+      end;
+    end;
+
+    LIconWidthUsed := C_IconSize + 16; 
+  end;
+
+  // Mensagem (Client do BodyLayout)
+  LblMsg := TLabel.Create(LBodyLayout);
+  LblMsg.Parent := LBodyLayout;
+  LblMsg.Align := TAlignLayout.Client; 
+  LblMsg.WordWrap := True;
+  LblMsg.Text := FMessage;
+  LblMsg.VertTextAlign := TTextAlign.Leading; 
+  LblMsg.TextSettings.Font.Size := 14;
+  LblMsg.StyledSettings := [TStyledSetting.Style, TStyledSetting.FontColor];
+
+  // Calculate Height needed
+  if FMsgType <> TMultiDialogType.mdtCustom then
+     LRecalcMsgWidth := C_DialogWidth - 32 - (C_IconSize + 16) - 8 // -Margins -Icon -InternalPadding
+  else
+     LRecalcMsgWidth := C_DialogWidth - 32 - 8;
+
+  LMsgHeight := CalculateMessageHeight(FMessage, LRecalcMsgWidth, LblMsg.TextSettings.Font);
+  
+  // Height do BodyLayout (Conteúdo real)
+  var LBodyHeightNeeded := Max(LMsgHeight, C_IconSize);
+  LBodyLayout.Height := LBodyHeightNeeded; // O Layout interno tem altura real do conteúdo
+  
+  // Calcula Altura Final da Janela (Ideal)
+  LFinalHeight := LBodyHeightNeeded + 16 + LBtnLayout.Height + C_PaddingHeight; 
+  if FTitle <> EmptyStr then
+     LFinalHeight := LFinalHeight + C_TitleHeight + 16;
+     
+  LFinalHeight := Max(LFinalHeight, C_MinDialogHeight);
+  // LFinalHeight := Min(LFinalHeight, C_MaxDialogHeight); // REMOVIDO Limite Fixo antigo
+
+  // Limita a altura a 90% da tela
+  var LMaxScreenHeight := Screen.Size.Height * 0.9;
+  if LFinalHeight > LMaxScreenHeight then
+    LFinalHeight := LMaxScreenHeight;
+  
+  LDialogRect.Height := LFinalHeight;
 
   // Lógica Cancelable
   if FCancelable then
@@ -164,15 +274,6 @@ begin
     LBgRect.OnClick := OnBackgroundClick;
   end;
 
-  // Layout dos botões
-  LBtnLayout := TFlowLayout.Create(LDialogRect);
-  LBtnLayout.Parent := LDialogRect;
-  LBtnLayout.Align := TAlignLayout.Bottom;
-  LBtnLayout.Height := C_ButtonsHeight;
-  LBtnLayout.Justify := TFlowJustify.Center;
-  LBtnLayout.JustifyLastLine := TFlowJustify.Center;
-  LBtnLayout.Margins.Rect := RectF(4, 4, 4, 0);
-
   // Cria botões com Layout Responsivo
   // Regra: Smartphone Portrait (Width < Height e < 600) com 4 botões
   // Linha 1: 3 botões | Linha 2: 1 botão full
@@ -180,6 +281,7 @@ begin
   begin
     // Lógica 3+1
     LBtnLayout.Height := C_ButtonsHeight * 2; // Dobra a altura para caber 2 linhas
+    LDialogRect.Height := LDialogRect.Height + C_ButtonsHeight; // Ajusta altura total
     
     // 3 primeiros botões dividem a largura
     LWidthButtons := (C_DialogWidth / 3) - 16; 
@@ -252,14 +354,6 @@ begin
     else
       LBtn.OnClick := ButtonClick;
   end;
-
-  // Altura final ajustada
-  LFinalHeight := LMsgHeight + LBtnLayout.Height + C_PaddingHeight; // Usa altura real do layout de botões
-  if FTitle <> EmptyStr then
-    LFinalHeight := LFinalHeight + C_TitleHeight;
-  LFinalHeight := Max(LFinalHeight, C_MinDialogHeight);
-  LFinalHeight := Min(LFinalHeight, C_MaxDialogHeight);
-  LDialogRect.Height := LFinalHeight;
 end;
 
 function TAndroidDialog.CalculateMessageHeight(const AText: string; const AWidth: Single; const AFont: TFont): Single;
