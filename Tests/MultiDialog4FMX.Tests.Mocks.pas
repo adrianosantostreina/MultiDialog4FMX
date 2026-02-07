@@ -51,6 +51,7 @@ type
     property Message: string read FMessage;
     property Cancelable: Boolean read FCancelable;
     property ButtonHandlers: TButtonHandlerList read FButtonHandlers;
+    property MsgType: TMultiDialogType read FMsgType;
   end;
 
 implementation

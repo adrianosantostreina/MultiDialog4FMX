@@ -1,15 +1,15 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<test-results name="D:\2.2 GitHub Adriano Santos\MultiDialog4FMX\Tests\Win32\Debug\MultiDialog4FMX.Tests.exe" total="35" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-02-07" time="0.476">
+<test-results name="D:\2.2 GitHub Adriano Santos\MultiDialog4FMX\Tests\Win32\Debug\MultiDialog4FMX.Tests.exe" total="36" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-02-07" time="0.464">
   <culture-info current-culture="en" current-uiculture="en" />
-  <test-suite type="Assembly" name="MultiDialog4FMX.Tests.exe" executed="true" result="Success" success="True" time="0.476" asserts="0">
+  <test-suite type="Assembly" name="MultiDialog4FMX.Tests.exe" executed="true" result="Success" success="True" time="0.464" asserts="0">
     <results>
-        <test-suite type="Namespace" name="MultiDialog4FMX" executed="true" result="Success" success="True" time="0.474" asserts="0" >
+        <test-suite type="Namespace" name="MultiDialog4FMX" executed="true" result="Success" success="True" time="0.462" asserts="0" >
           <results>
-              <test-suite type="Namespace" name="Tests" executed="true" result="Success" success="True" time="0.474" asserts="0" >
+              <test-suite type="Namespace" name="Tests" executed="true" result="Success" success="True" time="0.462" asserts="0" >
                 <results>
-                    <test-suite type="Fixture" name="TAndroidDialogTests" executed="True" result="Success" success="True" time="0.454" >
+                    <test-suite type="Fixture" name="TAndroidDialogTests" executed="True" result="Success" success="True" time="0.443" >
                       <results>
-                        <test-case name="TestCalculateMessageHeight_ShortText" executed="True" result="Success" success="True" time="0.365" asserts="0" />
+                        <test-case name="TestCalculateMessageHeight_ShortText" executed="True" result="Success" success="True" time="0.354" asserts="0" />
                         <test-case name="TestCalculateMessageHeight_LongText" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                         <test-case name="TestCalculateMessageHeight_MultiLine" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                         <test-case name="TestCalculateMessageHeight_EmptyText" executed="True" result="Success" success="True" time="0.000" asserts="0" />
@@ -19,7 +19,7 @@
                         <test-case name="TestInternalShow_EnforcesMaximumFourButtons" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                       </results>
                     </test-suite>
-                    <test-suite type="Fixture" name="TDialogBuilderTests" executed="True" result="Success" success="True" time="0.007" >
+                    <test-suite type="Fixture" name="TDialogBuilderTests" executed="True" result="Success" success="True" time="0.006" >
                       <results>
                         <test-case name="TestSetTitle_StoresValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                         <test-case name="TestSetMessage_StoresValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
@@ -29,6 +29,7 @@
                         <test-case name="TestButtons_ReturnsButtonsBuilder" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                         <test-case name="TestButtonsEnd_ReturnsDialogBuilder" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                         <test-case name="TestShow_CallsInternalShow" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                        <test-case name="TestSetType_StoresValue" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                         <test-case name="TestShow_ReturnsDialogBuilder" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                       </results>
                     </test-suite>
