@@ -35,6 +35,9 @@ type
     Button5: TButton;
     styGeralStyle: TStyleBook;
     Button6: TButton;
+    Button7: TButton;
+    Button8: TButton;
+    Button9: TButton;
     procedure Button1Click(Sender: TObject);
     procedure Button1Tap(Sender: TObject; const Point: TPointF);
     procedure Button2Click(Sender: TObject);
@@ -42,6 +45,9 @@ type
     procedure Button4Click(Sender: TObject);
     procedure Button5Click(Sender: TObject);
     procedure Button6Click(Sender: TObject);
+    procedure Button7Click(Sender: TObject);
+    procedure Button8Click(Sender: TObject);
+    procedure Button9Click(Sender: TObject);
 
     // Handlers para os botões de teste (Published)
     procedure OnTest1Click(Sender: TObject);
@@ -169,7 +175,7 @@ end;
 procedure TForm3.Button5Click(Sender: TObject);
 begin
   TMultiDialog4FMX.Dialog
-    .SetType(TMultiDialogType.mdtWarning) // Define o ícone
+    .SetType(TMultiDialogType.mdtConfirmation) // Define o ícone
     .SetTitle('Saída')
     .SetMessage('Confirma saída do sistema?')
     .SetCancelable(True)
@@ -212,6 +218,63 @@ begin
       .AddButton('Bom', TAlphaColorRec.Orange)  // ✅ Nova sintaxe limpa
       .AddButton('Ótimo', TAlphaColorRec.Green) // ✅ Nova sintaxe limpa
       .AddButton('Pular Avaliação', TAlphaColorRec.Lightgray) // ✅ Nova sintaxe limpa
+    .&End
+    .Show;
+end;
+
+procedure TForm3.Button7Click(Sender: TObject);
+begin
+  TMultiDialog4FMX.Dialog
+    .SetType(TMultiDialogType.mdtConfirmation) // Define o ícone
+    .SetTitle('Saída')
+    .SetMessage('Confirma saída do sistema?')
+    .SetCancelable(True)
+    .Buttons
+      .AddButton('Sim',
+        procedure()
+        begin
+          Label1.Text := 'Clicou em SIM.';
+        end
+      ,TAlphaColorRec.Null, 'BtnComumGreen') // ✅ Nova sintaxe limpa sem evento
+      .AddButton('Não', TAlphaColorRec.Null, 'BtnComumRed') // ✅ Nova sintaxe limpa sem evento
+    .&End
+    .Show;
+end;
+
+procedure TForm3.Button8Click(Sender: TObject);
+begin
+  TMultiDialog4FMX.Dialog
+    .SetType(TMultiDialogType.mdtQuestion) // Define o ícone
+    .SetTitle('Saída')
+    .SetMessage('Confirma saída do sistema?')
+    .SetCancelable(True)
+    .Buttons
+      .AddButton('Sim',
+        procedure()
+        begin
+          Label1.Text := 'Clicou em SIM.';
+        end
+      ,TAlphaColorRec.Null, 'BtnComumGreen') // ✅ Nova sintaxe limpa sem evento
+      .AddButton('Não', TAlphaColorRec.Null, 'BtnComumRed') // ✅ Nova sintaxe limpa sem evento
+    .&End
+    .Show;
+end;
+
+procedure TForm3.Button9Click(Sender: TObject);
+begin
+  TMultiDialog4FMX.Dialog
+    .SetType(TMultiDialogType.mdtInformation) // Define o ícone
+    .SetTitle('Saída')
+    .SetMessage('Confirma saída do sistema?')
+    .SetCancelable(True)
+    .Buttons
+      .AddButton('Sim',
+        procedure()
+        begin
+          Label1.Text := 'Clicou em SIM.';
+        end
+      ,TAlphaColorRec.Null, 'BtnComumGreen') // ✅ Nova sintaxe limpa sem evento
+      .AddButton('Não', TAlphaColorRec.Null, 'BtnComumRed') // ✅ Nova sintaxe limpa sem evento
     .&End
     .Show;
 end;

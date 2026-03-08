@@ -562,8 +562,41 @@ object Form3: TForm3
     Size.Height = 44.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 12
-    Text = 'Button6'
+    Text = 'Text'#227'o com '#205'cones'
     TextSettings.Trimming = None
     OnClick = Button6Click
+  end
+  object Button7: TButton
+    Position.X = 8.000000000000000000
+    Position.Y = 534.000000000000000000
+    Size.Width = 335.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 13
+    Text = 'Sair do Sistema'
+    TextSettings.Trimming = None
+    OnClick = Button7Click
+  end
+  object Button8: TButton
+    Position.X = 8.000000000000000000
+    Position.Y = 586.000000000000000000
+    Size.Width = 177.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 14
+    Text = 'Question'
+    TextSettings.Trimming = None
+    OnClick = Button8Click
+  end
+  object Button9: TButton
+    Position.X = 193.000000000000000000
+    Position.Y = 586.000000000000000000
+    Size.Width = 150.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 15
+    Text = 'Info'
+    TextSettings.Trimming = None
+    OnClick = Button9Click
   end
 end
