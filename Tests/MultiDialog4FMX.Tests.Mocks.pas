@@ -52,6 +52,8 @@ type
     property Cancelable: Boolean read FCancelable;
     property ButtonHandlers: TButtonHandlerList read FButtonHandlers;
     property MsgType: TMultiDialogType read FMsgType;
+    property FontSize: Single read FFontSize;
+    property BorderRadius: Single read FBorderRadius;
   end;
 
 implementation

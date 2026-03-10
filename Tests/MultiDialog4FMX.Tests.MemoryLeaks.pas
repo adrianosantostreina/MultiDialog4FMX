@@ -15,16 +15,16 @@ type
   public
     [Test]
     procedure TestDialogCreation_NoMemoryLeak;
-    
+
     [Test]
     procedure TestButtonHandler_ProperlyDestroyed;
-    
+
     [Test]
     procedure TestMultipleButtons_NoMemoryLeak;
-    
+
     [Test]
     procedure TestAnonymousMethod_NoMemoryLeak;
-    
+
     [Test]
     procedure TestButtonHandlerList_ClearsOnDestroy;
   end;
@@ -34,91 +34,116 @@ implementation
 { TMemoryLeakTests }
 
 procedure TMemoryLeakTests.TestDialogCreation_NoMemoryLeak;
+// Dialog with no buttons: creating and destroying must leave FInstanceCount unchanged.
 var
-  Dialog: IDialogBuilder;
+  Dialog : IDialogBuilder;
+  LBefore: Integer;
 begin
+  LBefore := TButtonHandler.FInstanceCount;
   Dialog := TMockDialogBase.Create;
-  // No try..finally needed for interfaces
   Dialog.SetTitle('Test');
   Dialog.SetMessage('Test Message');
-  Assert.Pass('Dialog created and destroyed without leaks');
-  // Dialog will be freed when it goes out of scope (RefCount = 0)
+  Dialog := nil; // releases interface, triggers Destroy -> FButtonHandlers freed
+  Assert.AreEqual(LBefore, TButtonHandler.FInstanceCount,
+    'No handlers created, count must not change');
 end;
 
 procedure TMemoryLeakTests.TestButtonHandler_ProperlyDestroyed;
+// 1 button: +1 while alive, back to baseline after dialog destroyed.
 var
-  Dialog: IDialogBuilder;
-  Mock: TMockDialogBase;
+  Dialog  : IDialogBuilder;
+  Mock    : TMockDialogBase;
+  LBefore, LDuring: Integer;
 begin
-  Mock := TMockDialogBase.Create;
-  Dialog := Mock; // Interface reference takes ownership
-  
+  LBefore := TButtonHandler.FInstanceCount;
+
+  Mock   := TMockDialogBase.Create;
+  Dialog := Mock;
   Dialog.Buttons.AddButton('Test Button');
-  Assert.AreEqual(1, Mock.ButtonHandlers.Count);
-  // TButtonHandlerList owns its objects (OwnsObjects=True by default)
-  // So they should be freed when the list is destroyed
+
+  LDuring := TButtonHandler.FInstanceCount;
+  Assert.AreEqual(LBefore + 1, LDuring,
+    'One handler should be alive while dialog exists');
+
+  Dialog := nil;
+  Assert.AreEqual(LBefore, TButtonHandler.FInstanceCount,
+    'Handler count must return to baseline after dialog is destroyed');
 end;
 
 procedure TMemoryLeakTests.TestMultipleButtons_NoMemoryLeak;
+// 4 buttons: +4 during, back to baseline after.
 var
-  Dialog: IDialogBuilder;
-  Mock: TMockDialogBase;
+  Dialog  : IDialogBuilder;
+  Mock    : TMockDialogBase;
+  LBefore, LDuring: Integer;
 begin
-  Mock := TMockDialogBase.Create;
+  LBefore := TButtonHandler.FInstanceCount;
+
+  Mock   := TMockDialogBase.Create;
   Dialog := Mock;
-  
   Dialog.Buttons
     .AddButton('Button 1')
     .AddButton('Button 2')
     .AddButton('Button 3')
     .AddButton('Button 4');
-      
-  Assert.AreEqual(4, Mock.ButtonHandlers.Count);
-  Assert.Pass('Multiple buttons created and destroyed without leaks');
+
+  LDuring := TButtonHandler.FInstanceCount;
+  Assert.AreEqual(LBefore + 4, LDuring,
+    'Four handlers should be alive while dialog exists');
+
+  Dialog := nil;
+  Assert.AreEqual(LBefore, TButtonHandler.FInstanceCount,
+    'Handler count must return to baseline after dialog is destroyed');
 end;
 
 procedure TMemoryLeakTests.TestAnonymousMethod_NoMemoryLeak;
+// 1 anonymous-method button: execute handler, destroy dialog, count returns to baseline.
 var
-  Dialog: IDialogBuilder;
-  Mock: TMockDialogBase;
+  Dialog   : IDialogBuilder;
+  Mock     : TMockDialogBase;
   TestValue: Integer;
+  LBefore  : Integer;
 begin
+  LBefore   := TButtonHandler.FInstanceCount;
   TestValue := 0;
-  Mock := TMockDialogBase.Create;
+
+  Mock   := TMockDialogBase.Create;
   Dialog := Mock;
-  
   Dialog.Buttons.AddButton('Test',
     procedure
     begin
       TestValue := 42;
     end);
-      
-  // Execute the anonymous method
+
   Mock.ButtonHandlers[0].AnonymousHandler();
-  Assert.AreEqual(42, TestValue);
-  Assert.Pass('Anonymous method created and destroyed without leaks');
+  Assert.AreEqual(42, TestValue, 'Anonymous handler must execute correctly');
+
+  Dialog := nil;
+  Assert.AreEqual(LBefore, TButtonHandler.FInstanceCount,
+    'Handler count must return to baseline after dialog is destroyed');
 end;
 
 procedure TMemoryLeakTests.TestButtonHandlerList_ClearsOnDestroy;
+// 2 buttons: explicit nil releases interface -> list freed -> both handlers freed.
 var
-  Dialog: IDialogBuilder;
-  Mock: TMockDialogBase;
-  InitialCount: Integer;
+  Dialog : IDialogBuilder;
+  Mock   : TMockDialogBase;
+  LBefore: Integer;
 begin
-  Mock := TMockDialogBase.Create;
+  LBefore := TButtonHandler.FInstanceCount;
+
+  Mock   := TMockDialogBase.Create;
   Dialog := Mock;
-  
   Dialog.Buttons
     .AddButton('Button 1')
     .AddButton('Button 2');
-      
-  InitialCount := Mock.ButtonHandlers.Count;
-  Assert.AreEqual(2, InitialCount);
-  Dialog := nil; // Explicit release
-  
-  // After free, the list and all its objects should be destroyed
-  // This test essentially just verifies no crash on destroy
-  Assert.Pass('ButtonHandlerList cleared on destroy');
+
+  Assert.AreEqual(LBefore + 2, TButtonHandler.FInstanceCount,
+    'Two handlers should be alive');
+
+  Dialog := nil; // explicit release
+  Assert.AreEqual(LBefore, TButtonHandler.FInstanceCount,
+    'Both handlers must be freed when dialog is destroyed');
 end;
 
 initialization
