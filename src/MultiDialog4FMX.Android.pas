@@ -1,4 +1,4 @@
-﻿unit MultiDialog4FMX.Android;
+unit MultiDialog4FMX.Android;
 
 interface
 
@@ -31,9 +31,9 @@ type
 
   TAndroidDialog = class(TDialogBase, IDialogBuilder)
   protected
+    FBtnLayout: TFlowLayout;
     procedure InternalShow(const AForm: TCommonCustomForm); override;
     function CalculateMessageHeight(const AText: string; const AWidth: Single; const AFont: TFont): Single;
-  private
     procedure ButtonClick(Sender: TObject);
     procedure ButtonTap(Sender: TObject; const Point: TPointF);
     procedure OnBackgroundClick(Sender: TObject);
@@ -54,7 +54,6 @@ const
   SVG_SUCCESS = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z';
 
   // Layout Constants
-  C_MaxDialogHeight = 400;
   C_MinDialogHeight = 200;
   C_DialogWidth = 300;
   C_TitleHeight = 40;
@@ -66,7 +65,7 @@ var
   LOverlay: TLayout;
   LBgRect: TRectangle;
   LDialogRect: TRectangle;
-  
+
   // Containers
   LBodyLayout: TLayout;
 
@@ -77,49 +76,31 @@ var
   LRec: TButtonHandler;
   LBtn: TButton;
   LHandlerObj: TButtonHandlerObj;
-  
+
   // Metrics
   LMsgHeight: Single;
   LFinalHeight: Single;
   LWidthButtons: Single;
   LRecalcMsgWidth: Single;
   LIconWidthUsed: Single;
+  LBodyHeightNeeded: Single;
+  LMaxScreenHeight: Single;
+  LMsgFont: TFont;
+  LScrollBox: TVertScrollBox;
+  LIconContainer: TLayout;
+  I: Integer;
 
 begin
   LParent := ResolveParentForm(AForm);
 
-  if FButtonHandlers.Count < 1 then
-    raise Exception.Create('O número mínimo de botões é 1.');
-
-  // Validação extra de máximo (embora o Builder já trate)
-  if FButtonHandlers.Count > 4 then
-    raise Exception.Create('O número máximo de botões é 4.');
-
-  // Resolve parent form (já resolvido via ResolveParentForm no início do método)
-  if not Assigned(LParent) then
-    LParent := Application.MainForm;
-  if not Assigned(LParent) then
-    LParent := Screen.ActiveForm;
   if not Assigned(LParent) then
     raise Exception.Create('Nenhum formulário disponível para exibir o diálogo.');
 
-  // Validação de Regra de Negócio:
-  // Se houver 2 ou mais botões, ao menos um deve ter evento associado.
-  if FButtonHandlers.Count >= 2 then
-  begin
-    var LHasEvent := False;
-    for LRec in FButtonHandlers do
-    begin
-      if Assigned(LRec.ClickHandler) or Assigned(LRec.TapHandler) or Assigned(LRec.AnonymousHandler) then
-      begin
-        LHasEvent := True;
-        Break;
-      end;
-    end;
-    
-    if not LHasEvent then
-      raise Exception.Create('Para diálogos com múltiplos botões, ao menos um deve possuir evento associado.');
-  end;
+  if FButtonHandlers.Count < 1 then
+    raise Exception.Create('O número mínimo de botões é 1.');
+
+  if FButtonHandlers.Count > 4 then
+    raise Exception.Create(C_MaxButtonsMsg);
 
   // LOverlay
   LOverlay := TLayout.Create(LParent);
@@ -150,11 +131,12 @@ begin
   // 1. Layout dos botões (Bottom) - Criação Primeiro para garantir Dock no Rodapé
   LBtnLayout := TFlowLayout.Create(LDialogRect);
   LBtnLayout.Parent := LDialogRect;
-  LBtnLayout.Align := TAlignLayout.Bottom; // Fixado no rodapé
+  LBtnLayout.Align := TAlignLayout.Bottom;
   LBtnLayout.Height := C_ButtonsHeight;
   LBtnLayout.Justify := TFlowJustify.Center;
   LBtnLayout.JustifyLastLine := TFlowJustify.Center;
-  LBtnLayout.Margins.Rect := RectF(4, 0, 4, 4); // Margem inferior 4 (do padding do form)
+  LBtnLayout.Margins.Rect := RectF(4, 0, 4, 4);
+  FBtnLayout := LBtnLayout;
 
   // 2. Título (Top)
   if FTitle <> EmptyStr then
@@ -164,7 +146,7 @@ begin
     LLblTitle.Align := TAlignLayout.Top;
     LLblTitle.Text := FTitle;
     LLblTitle.TextSettings.Font.Style := [TFontStyle.fsBold];
-    LLblTitle.Margins.Rect := RectF(16, 12, 16, 4); // Margem superior
+    LLblTitle.Margins.Rect := RectF(16, 12, 16, 4);
     LLblTitle.Height := C_TitleHeight;
     LLblTitle.TextSettings.Font.Size := 16;
     LLblTitle.StyledSettings := [TStyledSetting.Style, TStyledSetting.FontColor];
@@ -172,39 +154,36 @@ begin
   end;
 
   // 3. Corpo (Client) - Usando ScrollBox para permitir rolagem se necessário
-  var LScrollBox := TVertScrollBox.Create(LDialogRect);
+  LScrollBox := TVertScrollBox.Create(LDialogRect);
   LScrollBox.Parent := LDialogRect;
   LScrollBox.Align := TAlignLayout.Client;
-  LScrollBox.Margins.Rect := RectF(0, 8, 0, 8); // Margens externas do scroll
+  LScrollBox.Margins.Rect := RectF(0, 8, 0, 8);
   LScrollBox.ShowScrollBars := True;
 
   // Layout interno que vai crescer o quanto precisar (Conteúdo)
   LBodyLayout := TLayout.Create(LScrollBox);
   LBodyLayout.Parent := LScrollBox;
-  LBodyLayout.Align := TAlignLayout.Top; // Ocupa topo do ScrollBox e cresce
-  LBodyLayout.Margins.Rect := RectF(16, 0, 16, 0); // Margens internas do conteúdo
-  
+  LBodyLayout.Align := TAlignLayout.Top;
+  LBodyLayout.Margins.Rect := RectF(16, 0, 16, 0);
+
   LIconWidthUsed := 0;
 
   // Render Icon if not custom
   if FMsgType <> TMultiDialogType.mdtCustom then
   begin
-    // Container do ícone (Left)
-    var LIconContainer := TLayout.Create(LBodyLayout);
+    LIconContainer := TLayout.Create(LBodyLayout);
     LIconContainer.Parent := LBodyLayout;
     LIconContainer.Align := TAlignLayout.Left;
     LIconContainer.Width := C_IconSize;
     LIconContainer.Margins.Right := 16;
-    
+
     LIconPath := TPath.Create(LIconContainer);
     LIconPath.Parent := LIconContainer;
     LIconPath.Align := TAlignLayout.Top;
     LIconPath.Height := C_IconSize;
     LIconPath.Width := C_IconSize;
-    // LIconPath.Data.WrapMode := TWrapMode.Fit;
     LIconPath.Stroke.Kind := TBrushKind.None;
-    
-    // Choose Path Data and Color
+
     case FMsgType of
       mdtWarning:
       begin
@@ -233,44 +212,49 @@ begin
       end;
     end;
 
-    LIconWidthUsed := C_IconSize + 16; 
+    LIconWidthUsed := C_IconSize + 16;
   end;
 
   // Mensagem (Client do BodyLayout)
-  LblMsg := TLabel.Create(LBodyLayout);
-  LblMsg.Parent := LBodyLayout;
-  LblMsg.Align := TAlignLayout.Client; 
-  LblMsg.WordWrap := True;
-  LblMsg.Text := FMessage;
-  LblMsg.VertTextAlign := TTextAlign.Leading; 
-  LblMsg.TextSettings.Font.Size := 14;
-  LblMsg.StyledSettings := [TStyledSetting.Style, TStyledSetting.FontColor];
+  if FMessage <> EmptyStr then
+  begin
+    LblMsg := TLabel.Create(LBodyLayout);
+    LblMsg.Parent := LBodyLayout;
+    LblMsg.Align := TAlignLayout.Client;
+    LblMsg.WordWrap := True;
+    LblMsg.Text := FMessage;
+    LblMsg.VertTextAlign := TTextAlign.Leading;
+    LblMsg.TextSettings.Font.Size := 14;
+    LblMsg.StyledSettings := [TStyledSetting.Style, TStyledSetting.FontColor];
+  end;
 
   // Calculate Height needed
   if FMsgType <> TMultiDialogType.mdtCustom then
-     LRecalcMsgWidth := C_DialogWidth - 32 - (C_IconSize + 16) - 8 // -Margins -Icon -InternalPadding
+     LRecalcMsgWidth := C_DialogWidth - 32 - (C_IconSize + 16) - 8
   else
      LRecalcMsgWidth := C_DialogWidth - 32 - 8;
 
-  LMsgHeight := CalculateMessageHeight(FMessage, LRecalcMsgWidth, LblMsg.TextSettings.Font);
-  
-  // Height do BodyLayout (Conteúdo real)
-  var LBodyHeightNeeded := Max(LMsgHeight, C_IconSize);
-  LBodyLayout.Height := LBodyHeightNeeded; // O Layout interno tem altura real do conteúdo
-  
-  // Calcula Altura Final da Janela (Ideal)
-  LFinalHeight := LBodyHeightNeeded + 16 + LBtnLayout.Height + C_PaddingHeight; 
+  LMsgFont := TFont.Create;
+  try
+    LMsgFont.Size := 14;
+    LMsgHeight := CalculateMessageHeight(FMessage, LRecalcMsgWidth, LMsgFont);
+  finally
+    LMsgFont.Free;
+  end;
+
+  LBodyHeightNeeded := Max(LMsgHeight, C_IconSize);
+  LBodyLayout.Height := LBodyHeightNeeded;
+
+  LFinalHeight := LBodyHeightNeeded + 16 + LBtnLayout.Height + C_PaddingHeight;
   if FTitle <> EmptyStr then
      LFinalHeight := LFinalHeight + C_TitleHeight + 16;
-     
-  LFinalHeight := Max(LFinalHeight, C_MinDialogHeight);
-  // LFinalHeight := Min(LFinalHeight, C_MaxDialogHeight); // REMOVIDO Limite Fixo antigo
 
-  // Limita a altura a 90% da tela
-  var LMaxScreenHeight := Screen.Size.Height * 0.9;
+  LFinalHeight := Max(LFinalHeight, C_MinDialogHeight);
+
+  LMaxScreenHeight := Screen.Size.Height * 0.9;
   if LFinalHeight > LMaxScreenHeight then
     LFinalHeight := LMaxScreenHeight;
-  
+
   LDialogRect.Height := LFinalHeight;
 
   // Lógica Cancelable
@@ -281,29 +265,22 @@ begin
   end;
 
   // Cria botões com Layout Responsivo
-  // Regra: Smartphone Portrait (Width < Height e < 600) com 4 botões
-  // Linha 1: 3 botões | Linha 2: 1 botão full
   if (FButtonHandlers.Count = 4) and (Screen.Width < Screen.Height) and (Screen.Width < 600) then
   begin
-    // Lógica 3+1
-    LBtnLayout.Height := C_ButtonsHeight * 2; // Dobra a altura para caber 2 linhas
-    LDialogRect.Height := LDialogRect.Height + C_ButtonsHeight; // Ajusta altura total
-    
-    // 3 primeiros botões dividem a largura
-    LWidthButtons := (C_DialogWidth / 3) - 16; 
+    LBtnLayout.Height := C_ButtonsHeight * 2;
+    LDialogRect.Height := LDialogRect.Height + C_ButtonsHeight;
+    LWidthButtons := (C_DialogWidth / 3) - 16;
   end
   else if FButtonHandlers.Count = 1 then
   begin
-     // Se for apenas 1 botão, ele pode ocupar quase toda a largura
      LWidthButtons := C_DialogWidth - 32;
   end
   else
   begin
-    // Lógica padrão para 2 ou 3 botões (ou 4 em landscape)
     LWidthButtons := (C_DialogWidth / FButtonHandlers.Count) - 24;
   end;
 
-  for var I := 0 to FButtonHandlers.Count - 1 do
+  for I := 0 to FButtonHandlers.Count - 1 do
   begin
     LRec := FButtonHandlers[I];
     LBtn := TButton.Create(LBtnLayout);
@@ -312,19 +289,17 @@ begin
     LBtn.TextSettings.Font.Size := 14;
     LBtn.StyledSettings := [TStyledSetting.Style];
     LBtn.Height := 40;
-    
-    // Ajuste específico para o 4º botão no modo Portrait (Index 3)
+
     if (FButtonHandlers.Count = 4) and (Screen.Width < Screen.Height) and (Screen.Width < 600) and (I = 3) then
     begin
-      LBtn.Width := C_DialogWidth - 32; // Full width com margens
-      LBtn.Margins.Top := 8; // Espaço extra acima
+      LBtn.Width := C_DialogWidth - 32;
+      LBtn.Margins.Top := 8;
     end
     else
     begin
       LBtn.Width := LWidthButtons;
     end;
 
-    // Ajuste de margem: Apenas adiciona margem direita se NÃO for o último botão
     if I < FButtonHandlers.Count - 1 then
       LBtn.Margins.Right := 8
     else
@@ -332,13 +307,10 @@ begin
 
     LBtn.TintColor := LRec.Color;
 
-    // StyleLookup
     if LRec.StyleLookup <> '' then
     begin
       LBtn.StyleLookup := LRec.StyleLookup;
-      // IMPORTANTE: Para usar a cor da fonte do Estilo, precisamos INCLUIR FontColor no StyledSettings.
-      // O código anterior removia tudo ou resetava errado. Vamos garantir que o estilo mande.
-      LBtn.StyledSettings := [TStyledSetting.Family, TStyledSetting.Style, TStyledSetting.FontColor, TStyledSetting.Size]; 
+      LBtn.StyledSettings := [TStyledSetting.Family, TStyledSetting.Style, TStyledSetting.FontColor, TStyledSetting.Size];
     end;
 
     LHandlerObj := TButtonHandlerObj.Create;
@@ -353,8 +325,6 @@ begin
       raise;
     end;
 
-    // Se tiver TapHandler, usa OnTap.
-    // Caso contrário (tem ClickHandler OU não tem nada/nil), usa OnClick para garantir fechamento.
     if Assigned(LRec.TapHandler) then
       LBtn.OnTap := ButtonTap
     else
@@ -366,15 +336,20 @@ function TAndroidDialog.CalculateMessageHeight(const AText: string; const AWidth
 var
   Layout: TTextLayout;
 begin
+  if AText = EmptyStr then
+  begin
+    Result := 0;
+    Exit;
+  end;
+
   Layout := TTextLayoutManager.DefaultTextLayout.Create;
   try
     Layout.BeginUpdate;
     Layout.Font := AFont;
-    Layout.MaxSize := TSizeF.Create(AWidth, 9999); // Altura ilimitada
+    Layout.MaxSize := TSizeF.Create(AWidth, 9999);
     Layout.WordWrap := True;
     Layout.Text := AText;
     Layout.EndUpdate;
-
     Result := Layout.TextHeight + 10;
   finally
     Layout.Free;
@@ -382,16 +357,36 @@ begin
 end;
 
 procedure TAndroidDialog.CloseDialog(AOverlay: TLayout);
+var
+  I: Integer;
+  LBtn: TButton;
+  LObj: TButtonHandlerObj;
 begin
-  if Assigned(AOverlay) then
-  begin
-    AOverlay.Parent := nil;
-    {$IF DEFINED(ANDROID) OR DEFINED(IOS)}
-    AOverlay.DisposeOf;
-    {$ELSE}
-    AOverlay.Free;
-    {$ENDIF}
-  end;
+  if not Assigned(AOverlay) then
+    Exit;
+
+  // Libera todos os TButtonHandlerObj antes de destruir a hierarquia de controles.
+  // FMX não libera TagObject automaticamente ao destruir controles.
+  if Assigned(FBtnLayout) then
+    for I := 0 to FBtnLayout.ChildrenCount - 1 do
+      if FBtnLayout.Children[I] is TButton then
+      begin
+        LBtn := TButton(FBtnLayout.Children[I]);
+        if Assigned(LBtn.TagObject) then
+        begin
+          LObj := LBtn.TagObject as TButtonHandlerObj;
+          LBtn.TagObject := nil;
+          LObj.Free;
+        end;
+      end;
+  FBtnLayout := nil;
+
+  AOverlay.Parent := nil;
+  {$IF DEFINED(ANDROID) OR DEFINED(IOS)}
+  AOverlay.DisposeOf;
+  {$ELSE}
+  AOverlay.Free;
+  {$ENDIF}
 end;
 
 procedure TAndroidDialog.OnBackgroundClick(Sender: TObject);
@@ -399,8 +394,6 @@ var
   LObj: TFmxObject;
   LOverlay: TLayout;
 begin
-  // Tenta encontrar o Overlay subindo na hierarquia ou via Sender
-  // O Sender é o LBgRect (TRectangle), o Parent dele é o LOverlay (TLayout)
   if Sender is TFmxObject then
   begin
     LObj := TFmxObject(Sender).Parent;
@@ -415,37 +408,48 @@ end;
 procedure TAndroidDialog.ButtonClick(Sender: TObject);
 var
   Obj: TButtonHandlerObj;
+  LOverlay: TLayout;
 begin
-  if (Sender is TButton) and Assigned(TButton(Sender).TagObject) then
-  begin
-    Obj := TButton(Sender).TagObject as TButtonHandlerObj;
+  if not ((Sender is TButton) and Assigned(TButton(Sender).TagObject)) then
+    Exit;
+
+  Obj := TButton(Sender).TagObject as TButtonHandlerObj;
+  LOverlay := Obj.Overlay;
+
+  // Limpa TagObject ANTES de chamar o handler e ANTES de CloseDialog,
+  // evitando use-after-free quando CloseDialog destrói a hierarquia.
+  TButton(Sender).TagObject := nil;
+
+  try
     if Assigned(Obj.ClickHandler) then
       Obj.ClickHandler(Sender);
-      
     if Assigned(Obj.AnonymousHandler) then
       Obj.AnonymousHandler();
-
-    CloseDialog(Obj.Overlay);
-
-    TButton(Sender).TagObject := nil;
+  finally
     Obj.Free;
+    CloseDialog(LOverlay);
   end;
 end;
 
 procedure TAndroidDialog.ButtonTap(Sender: TObject; const Point: TPointF);
 var
   Obj: TButtonHandlerObj;
+  LOverlay: TLayout;
 begin
-  if (Sender is TButton) and Assigned(TButton(Sender).TagObject) then
-  begin
-    Obj := TButton(Sender).TagObject as TButtonHandlerObj;
+  if not ((Sender is TButton) and Assigned(TButton(Sender).TagObject)) then
+    Exit;
+
+  Obj := TButton(Sender).TagObject as TButtonHandlerObj;
+  LOverlay := Obj.Overlay;
+
+  TButton(Sender).TagObject := nil;
+
+  try
     if Assigned(Obj.TapHandler) then
       Obj.TapHandler(Sender, Point);
-
-    CloseDialog(Obj.Overlay);
-
-    TButton(Sender).TagObject := nil;
+  finally
     Obj.Free;
+    CloseDialog(LOverlay);
   end;
 end;
 
