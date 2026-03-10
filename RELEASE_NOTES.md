@@ -1,4 +1,4 @@
-# Release Notes - v1.2.0
+# Release Notes - v1.3.0
 
 ## 🐛 Critical Bug Fixes (Correções Críticas)
 
