@@ -80,3 +80,6 @@ __recovery/
 
 # Boss dependency manager vendor folder https://github.com/HashLoad/boss
 modules/
+
+# Git worktrees (isolated workspaces)
+.worktrees/
