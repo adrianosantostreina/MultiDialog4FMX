@@ -13,6 +13,9 @@ uses
   System.UITypes,
   System.Generics.Collections;
 
+const
+  C_MaxButtonsMsg = 'O di'#225'logo suporta no m'#225'ximo 4 bot'#245'es.';
+
 type
   // Guarda texto + handler click ou tap
   TButtonHandler = class
@@ -146,7 +149,7 @@ var
   Rec: TButtonHandler;
 begin
   if FParent.FButtonHandlers.Count >= 4 then
-    raise Exception.Create('O diálogo suporta no máximo 4 botões.');
+    raise Exception.Create(C_MaxButtonsMsg);
 
   Rec := TButtonHandler.Create;
   Rec.Text := AText;
@@ -168,7 +171,7 @@ var
   Rec: TButtonHandler;
 begin
   if FParent.FButtonHandlers.Count >= 4 then
-    raise Exception.Create('O diálogo suporta no máximo 4 botões.');
+    raise Exception.Create(C_MaxButtonsMsg);
 
   Rec := TButtonHandler.Create;
   Rec.Text := AText;
@@ -196,7 +199,7 @@ var
   Rec: TButtonHandler;
 begin
   if FParent.FButtonHandlers.Count >= 4 then
-    raise Exception.Create('O diálogo suporta no máximo 4 botões.');
+    raise Exception.Create(C_MaxButtonsMsg);
 
   Rec := TButtonHandler.Create;
   Rec.Text := AText;

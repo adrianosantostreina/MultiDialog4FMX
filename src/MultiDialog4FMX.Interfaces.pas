@@ -18,7 +18,7 @@ type
   /// Interface para construção fluente de diálogos.
   /// </summary>
   IDialogBuilder = interface
-    ['{A1B2C3D4-E5F6-47A8-9B0C-ABCDEF123456}']
+    ['{C7AC750E-AAEC-4B18-87AA-47E73F3DAD76}']
     
     /// <summary>
     /// Define o tipo do diálogo (ícone padrão).
@@ -59,7 +59,7 @@ type
   /// Interface para adição fluente de botões.
   /// </summary>
   IDialogButtonsBuilder = interface
-    ['{B1C2D3E4-F5A6-47A8-9B0C-ABCDEF654321}'] // Corrigido GUID duplicado se houver, mantendo o original por segurança
+    ['{A6ADB133-2020-47C5-A4A8-7A11EADED3DC}']
     
     /// <summary>
     /// Adiciona um botão com evento OnClick padrão.
