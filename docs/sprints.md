@@ -26,15 +26,15 @@
 
 ---
 
-## Sprint 2 — Curto Prazo 🔜 PRÓXIMA
+## Sprint 2 — Curto Prazo ✅ CONCLUÍDA (v1.4.0)
 
 | # | Item | Descrição |
 |---|---|---|
-| R6 | Refatorar `InternalShow` | Quebrar o God Method de ~275 linhas em métodos menores: `BuildOverlay`, `BuildHeader`, `BuildMessage`, `BuildButtons` |
-| R7 | Eliminar `TButtonHandlerObj` | Unificar com `TButtonHandler` — duplicação dos campos `ClickHandler`, `TapHandler`, `AnonymousHandler` entre as duas classes |
-| R8 | Expor configuração de layout | Permitir customização de cores, tamanho de fonte e border radius via API pública (`IDialogBuilder`) |
-| R9 | DPI-awareness | Substituir valores fixos de pixels por cálculo relativo à densidade (`Screen.Scale`) |
-| R10 | Testes de leak reais | Substituir os 5 testes `Assert.Pass` em `TMemoryLeakTests` por testes com rastreamento real de instâncias (FastMM4 ou contador de instâncias) |
+| R6 | ✅ Refatorar `InternalShow` | God Method (~287 lin.) → 6 sub-métodos + orquestrador de ~20 linhas |
+| R7 | ✅ Eliminar `TButtonHandlerObj` | Unificado com `TButtonHandler` via campo `Overlay: TLayout` |
+| R8 | ✅ Expor configuração de layout | `SetFontSize` e `SetBorderRadius` na `IDialogBuilder` |
+| R9 | ✅ DPI-awareness | `GetPlatformScale` via `IFMXScreenService.GetScreenScale`; constantes `C_Base*` |
+| R10 | ✅ Testes de leak reais | 5 testes reescritos com `TButtonHandler.FInstanceCount` delta |
 
 ---
 
