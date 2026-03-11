@@ -94,7 +94,7 @@ type
     procedure TestBuildOverlay_HasContentsAlign;
 
     [Test]
-    procedure TestBuildDialogRect_WidthIsScaled;
+    procedure TestBuildDialogRect_WidthIsCorrect;
 
     [Test]
     procedure TestBuildButtons_ChildCountMatchesHandlers;
@@ -492,13 +492,12 @@ begin
   end;
 end;
 
-procedure TAndroidDialogLayoutTests.TestBuildDialogRect_WidthIsScaled;
+procedure TAndroidDialogLayoutTests.TestBuildDialogRect_WidthIsCorrect;
 var
   LForm      : TCommonCustomForm;
   LOverlay   : TLayout;
   LDialogRect: TRectangle;
   LBgRect    : TRectangle;
-  LExpected  : Integer;
 begin
   if not Assigned(Application) then
   begin
@@ -510,10 +509,9 @@ begin
   try
     LOverlay := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
     try
-      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay, TAndroidDialogCracker(FDialog).GetPlatformScale);
-      LExpected := Round(300 * TAndroidDialogCracker(FDialog).GetPlatformScale);
-      Assert.IsTrue(Abs(Round(LDialogRect.Width) - LExpected) <= 1,
-        'Width deve ser ~' + IntToStr(LExpected) + ' (+-1)');
+      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay);
+      Assert.IsTrue(Abs(LDialogRect.Width - 300) < 1,
+        'Width deve ser 300 (logical points, sem multiplicar por scale)');
     finally
       LOverlay.Parent := nil;
       LOverlay.Free;
@@ -543,8 +541,8 @@ begin
   LForm := TCommonCustomForm.Create(nil);
   try
     LOverlay    := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
-    LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay, TAndroidDialogCracker(FDialog).GetPlatformScale);
-    TAndroidDialogCracker(FDialog).BuildButtons(LOverlay, LDialogRect, TAndroidDialogCracker(FDialog).GetPlatformScale);
+    LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay);
+    TAndroidDialogCracker(FDialog).BuildButtons(LOverlay, LDialogRect);
 
     Assert.AreEqual(3, TAndroidDialogCracker(FDialog).FBtnLayout.ChildrenCount,
       '3 handlers deve gerar 3 botoes em FBtnLayout');
@@ -603,18 +601,18 @@ begin
   LBodyLayout := TLayout.Create(nil);
   LBodyLayout.Height := 100;
   LBtnLayoutMock := TFlowLayout.Create(nil);
-  LBtnLayoutMock.Height := Round(56 * TAndroidDialogCracker(FDialog).GetPlatformScale);
+  LBtnLayoutMock.Height := 56;
 
   try
     TAndroidDialogCracker(FDialog).FBtnLayout := LBtnLayoutMock;
 
     TAndroidDialogCracker(FDialog).FTitle := 'Test Title';
     LHeightWithTitle := TAndroidDialogCracker(FDialog).CalculateFinalHeight(
-      LBodyLayout, TAndroidDialogCracker(FDialog).GetPlatformScale, False);
+      LBodyLayout, False);
 
     TAndroidDialogCracker(FDialog).FTitle := '';
     LHeightNoTitle := TAndroidDialogCracker(FDialog).CalculateFinalHeight(
-      LBodyLayout, TAndroidDialogCracker(FDialog).GetPlatformScale, False);
+      LBodyLayout, False);
 
     TAndroidDialogCracker(FDialog).FBtnLayout := nil;
 
@@ -645,7 +643,7 @@ begin
   try
     LOverlay := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
     try
-      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay, TAndroidDialogCracker(FDialog).GetPlatformScale);
+      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay);
       Assert.AreEqual(Single(8), LDialogRect.XRadius,
         'XRadius deve refletir o BorderRadius configurado');
     finally
@@ -681,9 +679,9 @@ begin
   try
     LOverlay    := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
     try
-      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay, TAndroidDialogCracker(FDialog).GetPlatformScale);
+      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay);
       TAndroidDialogCracker(FDialog).BuildBody(
-        LDialogRect, TAndroidDialogCracker(FDialog).GetPlatformScale, LIconPresent, LBodyLayout);
+        LDialogRect, LIconPresent, LBodyLayout);
 
       LLabel := nil;
       for I := 0 to LBodyLayout.ChildrenCount - 1 do

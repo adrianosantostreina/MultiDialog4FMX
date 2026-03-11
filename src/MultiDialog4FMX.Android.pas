@@ -23,6 +23,8 @@ uses
 
 type
   TAndroidDialog = class(TDialogBase, IDialogBuilder)
+  private
+    FKeepAlive: IDialogBuilder;
   protected
     FBtnLayout: TFlowLayout;
     procedure InternalShow(const AForm: TCommonCustomForm); override;
@@ -34,13 +36,12 @@ type
     // Sub-methods extracted from InternalShow (R6+R9)
     function  GetPlatformScale: Single;
     function  BuildOverlay(const AParent: TCommonCustomForm; out ABgRect: TRectangle): TLayout;
-    function  BuildDialogRect(const AOverlay: TLayout; const AScale: Single): TRectangle;
-    procedure BuildHeader(const ADialogRect: TRectangle; const AScale: Single);
-    procedure BuildBody(const ADialogRect: TRectangle; const AScale: Single;
+    function  BuildDialogRect(const AOverlay: TLayout): TRectangle;
+    procedure BuildHeader(const ADialogRect: TRectangle);
+    procedure BuildBody(const ADialogRect: TRectangle;
                         out AIconPresent: Boolean; out ABodyLayout: TLayout);
-    procedure BuildButtons(const AOverlay: TLayout; const ADialogRect: TRectangle;
-                           const AScale: Single);
-    function  CalculateFinalHeight(const ABodyLayout: TLayout; const AScale: Single;
+    procedure BuildButtons(const AOverlay: TLayout; const ADialogRect: TRectangle);
+    function  CalculateFinalHeight(const ABodyLayout: TLayout;
                                    const AIconPresent: Boolean): Single;
   end;
 
@@ -85,7 +86,6 @@ var
   LBgRect     : TRectangle;
   LBodyLayout : TLayout;
   LIconPresent: Boolean;
-  LScale      : Single;
 begin
   LParent := ResolveParentForm(AForm);
   if not Assigned(LParent) then
@@ -95,20 +95,21 @@ begin
   if FButtonHandlers.Count > 4 then
     raise Exception.Create(C_MaxButtonsMsg);
 
-  LScale      := GetPlatformScale;
   LOverlay    := BuildOverlay(LParent, LBgRect);
-  LDialogRect := BuildDialogRect(LOverlay, LScale);
-  BuildButtons(LOverlay, LDialogRect, LScale);                         // Bottom — before Client
-  BuildHeader(LDialogRect, LScale);                                    // Top
-  BuildBody(LDialogRect, LScale, LIconPresent, LBodyLayout);           // Client
+  LDialogRect := BuildDialogRect(LOverlay);
+  BuildButtons(LOverlay, LDialogRect);                         // Bottom — before Client
+  BuildHeader(LDialogRect);                                    // Top
+  BuildBody(LDialogRect, LIconPresent, LBodyLayout);           // Client
 
-  LDialogRect.Height := CalculateFinalHeight(LBodyLayout, LScale, LIconPresent);
+  LDialogRect.Height := CalculateFinalHeight(LBodyLayout, LIconPresent);
 
   if FCancelable then
   begin
     LBgRect.HitTest := True;
     LBgRect.OnClick := OnBackgroundClick;
   end;
+
+  FKeepAlive := Self;
 end;
 
 function TAndroidDialog.BuildOverlay(const AParent: TCommonCustomForm;
@@ -134,15 +135,14 @@ begin
   Result  := LOverlay;
 end;
 
-function TAndroidDialog.BuildDialogRect(const AOverlay: TLayout;
-  const AScale: Single): TRectangle;
+function TAndroidDialog.BuildDialogRect(const AOverlay: TLayout): TRectangle;
 var
   LDialogRect: TRectangle;
 begin
   LDialogRect := TRectangle.Create(AOverlay);
   LDialogRect.Parent := AOverlay;
   LDialogRect.Align := TAlignLayout.Center;
-  LDialogRect.Width := Round(C_BaseDialogWidth * AScale);
+  LDialogRect.Width := C_BaseDialogWidth;
   LDialogRect.XRadius := FBorderRadius;
   LDialogRect.YRadius := FBorderRadius;
   LDialogRect.Fill.Color := TAlphaColorRec.White;
@@ -151,7 +151,7 @@ begin
   Result := LDialogRect;
 end;
 
-procedure TAndroidDialog.BuildHeader(const ADialogRect: TRectangle; const AScale: Single);
+procedure TAndroidDialog.BuildHeader(const ADialogRect: TRectangle);
 var
   LLblTitle: TLabel;
 begin
@@ -164,14 +164,14 @@ begin
   LLblTitle.Text := FTitle;
   LLblTitle.TextSettings.Font.Style := [TFontStyle.fsBold];
   LLblTitle.Margins.Rect := RectF(16, 12, 16, 4);
-  LLblTitle.Height := Round(C_BaseTitleHeight * AScale);
+  LLblTitle.Height := C_BaseTitleHeight;
   LLblTitle.TextSettings.Font.Size := C_BaseTitleFontSize;
   LLblTitle.StyledSettings := [TStyledSetting.Style, TStyledSetting.FontColor];
   LLblTitle.VertTextAlign := TTextAlign.Center;
 end;
 
 procedure TAndroidDialog.BuildBody(const ADialogRect: TRectangle;
-  const AScale: Single; out AIconPresent: Boolean; out ABodyLayout: TLayout);
+  out AIconPresent: Boolean; out ABodyLayout: TLayout);
 var
   LScrollBox    : TVertScrollBox;
   LBodyLayout   : TLayout;
@@ -200,14 +200,14 @@ begin
     LIconContainer := TLayout.Create(LBodyLayout);
     LIconContainer.Parent := LBodyLayout;
     LIconContainer.Align := TAlignLayout.Left;
-    LIconContainer.Width := Round(C_BaseIconSize * AScale);
+    LIconContainer.Width := C_BaseIconSize;
     LIconContainer.Margins.Right := 16;
 
     LIconPath := TPath.Create(LIconContainer);
     LIconPath.Parent := LIconContainer;
     LIconPath.Align := TAlignLayout.Top;
-    LIconPath.Height := Round(C_BaseIconSize * AScale);
-    LIconPath.Width := Round(C_BaseIconSize * AScale);
+    LIconPath.Height := C_BaseIconSize;
+    LIconPath.Width := C_BaseIconSize;
     LIconPath.Stroke.Kind := TBrushKind.None;
 
     case FMsgType of
@@ -252,10 +252,9 @@ begin
   end;
 
   if AIconPresent then
-    LMsgWidth := Round(C_BaseDialogWidth * AScale) - 32 -
-                 Round((C_BaseIconSize + 16) * AScale) - 8
+    LMsgWidth := C_BaseDialogWidth - 32 - (C_BaseIconSize + 16) - 8
   else
-    LMsgWidth := Round(C_BaseDialogWidth * AScale) - 40;
+    LMsgWidth := C_BaseDialogWidth - 40;
 
   LMsgFont := TFont.Create;
   try
@@ -266,7 +265,7 @@ begin
   end;
 
   if AIconPresent then
-    LBodyLayout.Height := Max(LMsgHeight, Round(C_BaseIconSize * AScale))
+    LBodyLayout.Height := Max(LMsgHeight, C_BaseIconSize)
   else
     LBodyLayout.Height := LMsgHeight;
 
@@ -274,7 +273,7 @@ begin
 end;
 
 procedure TAndroidDialog.BuildButtons(const AOverlay: TLayout;
-  const ADialogRect: TRectangle; const AScale: Single);
+  const ADialogRect: TRectangle);
 var
   LBtnLayout   : TFlowLayout;
   LWidthButtons: Single;
@@ -285,7 +284,7 @@ begin
   LBtnLayout := TFlowLayout.Create(ADialogRect);
   LBtnLayout.Parent := ADialogRect;
   LBtnLayout.Align := TAlignLayout.Bottom;
-  LBtnLayout.Height := Round(C_BaseButtonsHeight * AScale);
+  LBtnLayout.Height := C_BaseButtonsHeight;
   LBtnLayout.Justify := TFlowJustify.Center;
   LBtnLayout.JustifyLastLine := TFlowJustify.Center;
   LBtnLayout.Margins.Rect := RectF(4, 0, 4, 4);
@@ -293,15 +292,15 @@ begin
 
   // Responsive: 4 buttons in portrait — use 2 rows
   if (FButtonHandlers.Count = 4) and (Screen.Width < Screen.Height) and
-     (Screen.Width < C_BaseResponsiveBreak) then
+     (Round(Screen.Width / GetPlatformScale) < C_BaseResponsiveBreak) then
   begin
-    LBtnLayout.Height := Round(C_BaseButtonsHeight * AScale) * 2;
-    LWidthButtons := Round(C_BaseDialogWidth * AScale / 3) - 16;
+    LBtnLayout.Height := C_BaseButtonsHeight * 2;
+    LWidthButtons := Round(C_BaseDialogWidth / 3) - 16;
   end
   else if FButtonHandlers.Count = 1 then
-    LWidthButtons := Round(C_BaseDialogWidth * AScale) - 32
+    LWidthButtons := C_BaseDialogWidth - 32
   else
-    LWidthButtons := Round(C_BaseDialogWidth * AScale / FButtonHandlers.Count) - 24;
+    LWidthButtons := Round(C_BaseDialogWidth / FButtonHandlers.Count) - 24;
 
   for I := 0 to FButtonHandlers.Count - 1 do
   begin
@@ -311,12 +310,12 @@ begin
     LBtn.Text := LRec.Text;
     LBtn.TextSettings.Font.Size := FFontSize;
     LBtn.StyledSettings := [TStyledSetting.Style];
-    LBtn.Height := Round(C_BaseBtnHeight * AScale);
+    LBtn.Height := C_BaseBtnHeight;
 
     if (FButtonHandlers.Count = 4) and (Screen.Width < Screen.Height) and
-       (Screen.Width < C_BaseResponsiveBreak) and (I = 3) then
+       (Round(Screen.Width / GetPlatformScale) < C_BaseResponsiveBreak) and (I = 3) then
     begin
-      LBtn.Width := Round(C_BaseDialogWidth * AScale) - 32;
+      LBtn.Width := C_BaseDialogWidth - 32;
       LBtn.Margins.Top := 8;
     end
     else
@@ -348,19 +347,18 @@ begin
 end;
 
 function TAndroidDialog.CalculateFinalHeight(const ABodyLayout: TLayout;
-  const AScale: Single; const AIconPresent: Boolean): Single;
+  const AIconPresent: Boolean): Single;
 var
   LMaxScreenHeight: Single;
 begin
-  Result := ABodyLayout.Height + 16 + FBtnLayout.Height +
-            Round(C_BasePaddingHeight * AScale);
+  Result := ABodyLayout.Height + 16 + FBtnLayout.Height + C_BasePaddingHeight;
 
   if FTitle <> EmptyStr then
-    Result := Result + Round(C_BaseTitleHeight * AScale) + 16;
+    Result := Result + C_BaseTitleHeight + 16;
 
-  Result := Max(Result, Round(C_BaseMinDialogHeight * AScale));
+  Result := Max(Result, C_BaseMinDialogHeight);
 
-  LMaxScreenHeight := Screen.Size.Height * 0.9;
+  LMaxScreenHeight := Round(Screen.Size.Height / GetPlatformScale) * 0.9;
   if Result > LMaxScreenHeight then
     Result := LMaxScreenHeight;
 end;
@@ -392,12 +390,16 @@ end;
 
 procedure TAndroidDialog.CloseDialog(AOverlay: TLayout);
 var
-  I   : Integer;
-  LBtn: TButton;
-  LObj: TButtonHandler;
+  I          : Integer;
+  LBtn       : TButton;
+  LObj       : TButtonHandler;
+  LKeepAlive : IDialogBuilder;
 begin
   if not Assigned(AOverlay) then
     Exit;
+
+  LKeepAlive := FKeepAlive;
+  FKeepAlive := nil;
 
   // Nil the overlay reference on each handler.
   // Handlers are owned by FButtonHandlers (TObjectList OwnsObjects=True) — do NOT free here.
