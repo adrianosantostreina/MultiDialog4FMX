@@ -7,22 +7,30 @@ uses
 
   FMX.Types,
   FMX.Forms,
+  FMX.Layouts,
 
   System.Classes,
   System.SysUtils,
   System.UITypes,
   System.Generics.Collections;
 
+const
+  C_MaxButtonsMsg = 'O di'#225'logo suporta no m'#225'ximo 4 bot'#245'es.';
+
 type
   // Guarda texto + handler click ou tap
   TButtonHandler = class
   public
+    class var FInstanceCount: Integer;
     Text: string;
     ClickHandler: TNotifyEvent;
     TapHandler: TTapEvent;
     AnonymousHandler: TProc;
     Color: TAlphaColor;
     StyleLookup: string;
+    Overlay: TLayout;
+    constructor Create;
+    destructor Destroy; override;
   end;
   TButtonHandlerList = TObjectList<TButtonHandler>;
 
@@ -33,6 +41,8 @@ type
     FCancelable: Boolean;
     FButtonHandlers: TButtonHandlerList;
     FMsgType: TMultiDialogType;
+    FFontSize: Single;
+    FBorderRadius: Single;
     // Cada plataforma implementa sua exibição
     procedure InternalShow(const AForm: TCommonCustomForm); virtual; abstract;
     function ResolveParentForm(const AForm: TCommonCustomForm): TCommonCustomForm;
@@ -45,6 +55,8 @@ type
     function SetTitle(const ATitle: string): IDialogBuilder;
     function SetMessage(const AMessage: string): IDialogBuilder;
     function SetCancelable(const Value: Boolean): IDialogBuilder;
+    function SetFontSize(const ASize: Single): IDialogBuilder;
+    function SetBorderRadius(const ARadius: Single): IDialogBuilder;
     function Buttons: IDialogButtonsBuilder;
     function Show: IDialogBuilder; overload;
     function Show(const AForm: TCommonCustomForm): IDialogBuilder; overload;
@@ -66,6 +78,20 @@ type
 
 implementation
 
+{ TButtonHandler }
+
+constructor TButtonHandler.Create;
+begin
+  inherited;
+  Inc(TButtonHandler.FInstanceCount);
+end;
+
+destructor TButtonHandler.Destroy;
+begin
+  Dec(TButtonHandler.FInstanceCount);
+  inherited;
+end;
+
 { TDialogBase }
 
 function TDialogBase.ResolveParentForm(const AForm: TCommonCustomForm): TCommonCustomForm;
@@ -83,6 +109,8 @@ constructor TDialogBase.Create;
 begin
   inherited;
   FButtonHandlers := TButtonHandlerList.Create(True);
+  FFontSize     := 14;
+  FBorderRadius := 12;
 end;
 
 destructor TDialogBase.Destroy;
@@ -112,6 +140,18 @@ end;
 function TDialogBase.SetCancelable(const Value: Boolean): IDialogBuilder;
 begin
   FCancelable := Value;
+  Result := Self;
+end;
+
+function TDialogBase.SetFontSize(const ASize: Single): IDialogBuilder;
+begin
+  FFontSize := ASize;
+  Result := Self;
+end;
+
+function TDialogBase.SetBorderRadius(const ARadius: Single): IDialogBuilder;
+begin
+  FBorderRadius := ARadius;
   Result := Self;
 end;
 
@@ -146,7 +186,7 @@ var
   Rec: TButtonHandler;
 begin
   if FParent.FButtonHandlers.Count >= 4 then
-    raise Exception.Create('O diálogo suporta no máximo 4 botões.');
+    raise Exception.Create(C_MaxButtonsMsg);
 
   Rec := TButtonHandler.Create;
   Rec.Text := AText;
@@ -168,7 +208,7 @@ var
   Rec: TButtonHandler;
 begin
   if FParent.FButtonHandlers.Count >= 4 then
-    raise Exception.Create('O diálogo suporta no máximo 4 botões.');
+    raise Exception.Create(C_MaxButtonsMsg);
 
   Rec := TButtonHandler.Create;
   Rec.Text := AText;
@@ -196,7 +236,7 @@ var
   Rec: TButtonHandler;
 begin
   if FParent.FButtonHandlers.Count >= 4 then
-    raise Exception.Create('O diálogo suporta no máximo 4 botões.');
+    raise Exception.Create(C_MaxButtonsMsg);
 
   Rec := TButtonHandler.Create;
   Rec.Text := AText;

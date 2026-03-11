@@ -18,8 +18,8 @@ type
   /// Interface para construção fluente de diálogos.
   /// </summary>
   IDialogBuilder = interface
-    ['{A1B2C3D4-E5F6-47A8-9B0C-ABCDEF123456}']
-    
+    ['{D4F82B1C-3E97-4A5D-B2C0-8F1E5D9A6703}']
+
     /// <summary>
     /// Define o tipo do diálogo (ícone padrão).
     /// </summary>
@@ -29,26 +29,37 @@ type
     /// Define o título do diálogo.
     /// </summary>
     function SetTitle(const ATitle: string): IDialogBuilder;
-    
+
     /// <summary>
     /// Define a mensagem do diálogo.
     /// </summary>
     function SetMessage(const AMessage: string): IDialogBuilder;
-    
+
     /// <summary>
     /// Define se o diálogo pode ser fechado clicando fora dele (no overlay).
     /// </summary>
     function SetCancelable(const Value: Boolean): IDialogBuilder;
 
     /// <summary>
+    /// Define o tamanho de fonte para a mensagem e botões.
+    /// </summary>
+    function SetFontSize(const ASize: Single): IDialogBuilder;
+
+    /// <summary>
+    /// Define o raio de arredondamento das bordas do diálogo.
+    /// </summary>
+    function SetBorderRadius(const ARadius: Single): IDialogBuilder;
+
+    /// <summary>
     /// Acessa o construtor de botões.
     /// </summary>
     function Buttons: IDialogButtonsBuilder;
+
     /// <summary>
     /// Exibe o diálogo.
     /// </summary>
     function Show: IDialogBuilder; overload;
-    
+
     /// <summary>
     /// Exibe o diálogo em um formulário específico.
     /// </summary>
@@ -59,7 +70,7 @@ type
   /// Interface para adição fluente de botões.
   /// </summary>
   IDialogButtonsBuilder = interface
-    ['{B1C2D3E4-F5A6-47A8-9B0C-ABCDEF654321}'] // Corrigido GUID duplicado se houver, mantendo o original por segurança
+    ['{A6ADB133-2020-47C5-A4A8-7A11EADED3DC}']
     
     /// <summary>
     /// Adiciona um botão com evento OnClick padrão.

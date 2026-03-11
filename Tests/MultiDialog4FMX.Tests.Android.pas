@@ -6,8 +6,13 @@ uses
   DUnitX.TestFramework,
   MultiDialog4FMX.Android,
   MultiDialog4FMX.Base,
+  MultiDialog4FMX.Interfaces,
+  FMX.Types,
   FMX.Graphics,
   FMX.Forms,
+  FMX.Layouts,
+  FMX.Objects,
+  FMX.StdCtrls,
   System.SysUtils,
   System.UITypes;
 
@@ -19,39 +24,97 @@ type
   public
     [Setup]
     procedure Setup;
-    
+
     [TearDown]
     procedure TearDown;
-    
+
     [Test]
     procedure TestCalculateMessageHeight_ShortText;
-    
+
     [Test]
     procedure TestCalculateMessageHeight_LongText;
-    
+
     [Test]
     procedure TestCalculateMessageHeight_MultiLine;
-    
+
     [Test]
     procedure TestCalculateMessageHeight_EmptyText;
-    
+
     [Test]
     procedure TestResolveParentForm_WithExplicitForm;
-    
+
     [Test]
     procedure TestResolveParentForm_WithNilForm;
-    
+
     [Test]
     procedure TestInternalShow_RequiresMinimumOneButton;
-    
+
     [Test]
     procedure TestInternalShow_EnforcesMaximumFourButtons;
+
+    [Test]
+    procedure TestInternalShow_TwoButtonsNoHandler_NoValidationException;
+
+  end;
+
+  [TestFixture]
+  TAndroidDialogCloseTests = class
+  private
+    FDialog: TAndroidDialog;
+    FHandlerCallCount: Integer;
+    FHandlerSender: TObject;
+    procedure OnClickHandler(Sender: TObject);
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure TestButtonClick_CallsHandlerAndClearsTagObject;
+
+    [Test]
+    procedure TestButtonClick_WhenHandlerRaises_OverlayIsStillFreed;
+
+    [Test]
+    procedure TestCloseDialog_FreesAllRemainingTagObjects;
+  end;
+
+  [TestFixture]
+  TAndroidDialogLayoutTests = class
+  private
+    FDialog: TAndroidDialog;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure TestBuildOverlay_HasContentsAlign;
+
+    [Test]
+    procedure TestBuildDialogRect_WidthIsScaled;
+
+    [Test]
+    procedure TestBuildButtons_ChildCountMatchesHandlers;
+
+    [Test]
+    procedure TestInternalShow_SubMethodsRun_FBtnLayoutAssigned;
+
+    [Test]
+    procedure TestCalculateFinalHeight_WithTitle_GreaterThanWithout;
+
+    [Test]
+    procedure TestBuildDialogRect_UsesBorderRadius;
+
+    [Test]
+    procedure TestBuildBody_UsesFontSize;
   end;
 
 implementation
 
 type
-  // Cracker class to access protected members of TAndroidDialog
   TAndroidDialogCracker = class(TAndroidDialog);
 
 { TAndroidDialogTests }
@@ -135,19 +198,18 @@ end;
 procedure TAndroidDialogTests.TestResolveParentForm_WithExplicitForm;
 var
   TestForm: TCommonCustomForm;
-  Result: TCommonCustomForm;
+  LResult: TCommonCustomForm;
 begin
   if not Assigned(Application) then
   begin
     Assert.Pass('Cannot test without Application object');
     Exit;
   end;
-  
+
   TestForm := TCommonCustomForm.Create(nil);
   try
-    // ResolveParentForm is protected in TDialogBase, so we cast to expose it
-    Result := TAndroidDialogCracker(FDialog).ResolveParentForm(TestForm);
-    Assert.AreEqual(TestForm, Result, 'Should return the explicit form provided');
+    LResult := TAndroidDialogCracker(FDialog).ResolveParentForm(TestForm);
+    Assert.AreEqual(TestForm, LResult, 'Should return the explicit form provided');
   finally
     TestForm.Free;
   end;
@@ -155,63 +217,497 @@ end;
 
 procedure TAndroidDialogTests.TestResolveParentForm_WithNilForm;
 var
-  Result: TCommonCustomForm;
+  LResult: TCommonCustomForm;
 begin
   if not Assigned(Application) then
   begin
     Assert.Pass('Cannot test without Application object');
     Exit;
   end;
-  
-  // ResolveParentForm is protected
-  Result := TAndroidDialogCracker(FDialog).ResolveParentForm(nil);
-  
-  // In console app without main form, this may return nil.
-  // We accept nil OR a valid form.
+
+  LResult := TAndroidDialogCracker(FDialog).ResolveParentForm(nil);
+
   if Assigned(Application.MainForm) then
-    Assert.IsNotNull(Result, 'Should resolve to a valid form')
+    Assert.IsNotNull(LResult, 'Should resolve to a valid form')
   else
-    Assert.IsNull(Result, 'Should return nil when no forms are active');
+    Assert.IsNull(LResult, 'Should return nil when no forms are active');
 end;
 
 procedure TAndroidDialogTests.TestInternalShow_RequiresMinimumOneButton;
+var
+  LMsg: string;
+  LForm: TCommonCustomForm;
 begin
-  Assert.WillRaise(
-    procedure
-    begin
-      // InternalShow is protected
-      TAndroidDialogCracker(FDialog).InternalShow(nil);
-    end,
-    Exception,
-    'O número mínimo de botões é 1.');
+  LMsg := '';
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    try
+      TAndroidDialogCracker(FDialog).InternalShow(LForm);
+    except
+      on E: Exception do
+        LMsg := E.Message;
+    end;
+  finally
+    LForm.Free;
+  end;
+
+  Assert.AreEqual('O n'#250'mero m'#237'nimo de bot'#245'es '#233' 1.', LMsg,
+    'Deve rejeitar dialogo sem botoes');
 end;
 
 procedure TAndroidDialogTests.TestInternalShow_EnforcesMaximumFourButtons;
+var
+  LInternalShowMsg: string;
+  LBuilderMsg: string;
+  LForm: TCommonCustomForm;
 begin
-  // Add 5 buttons manually to FButtonHandlers (bypassing the builder validation)
-  // FButtonHandlers is protected in TDialogBase.
-  // We can access it via TAndroidDialogCracker if TDialogBase is in the same package/unit context, 
-  // OR we use the public ButtonHandlers property IF we are using TMockDialogBase? 
-  // ERROR: FDialog here is TAndroidDialog, NOT TMockDialogBase. 
-  // TAndroidDialog doesn't have the "ButtonHandlers" public property we added to TMockDialogBase.
-  // We need to access FButtonHandlers via the cracker too.
-  
   TAndroidDialogCracker(FDialog).FButtonHandlers.Add(TButtonHandler.Create);
   TAndroidDialogCracker(FDialog).FButtonHandlers.Add(TButtonHandler.Create);
   TAndroidDialogCracker(FDialog).FButtonHandlers.Add(TButtonHandler.Create);
   TAndroidDialogCracker(FDialog).FButtonHandlers.Add(TButtonHandler.Create);
   TAndroidDialogCracker(FDialog).FButtonHandlers.Add(TButtonHandler.Create);
-  
-  Assert.WillRaise(
-    procedure
+
+  LInternalShowMsg := '';
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    try
+      TAndroidDialogCracker(FDialog).InternalShow(LForm);
+    except
+      on E: Exception do
+        LInternalShowMsg := E.Message;
+    end;
+  finally
+    LForm.Free;
+  end;
+
+  Assert.IsNotEmpty(LInternalShowMsg,
+    'InternalShow deve rejeitar mais de 4 botoes com uma mensagem de erro');
+
+  LBuilderMsg := '';
+  try
+    FDialog.Buttons
+      .AddButton('1').AddButton('2').AddButton('3').AddButton('4').AddButton('5');
+  except
+    on E: Exception do
+      LBuilderMsg := E.Message;
+  end;
+
+  Assert.AreEqual(LInternalShowMsg, LBuilderMsg,
+    'Mensagem de maximo deve ser igual em InternalShow e em AddButton');
+end;
+
+procedure TAndroidDialogTests.TestInternalShow_TwoButtonsNoHandler_NoValidationException;
+var
+  LRaisedValidationError: Boolean;
+begin
+  TAndroidDialogCracker(FDialog).FButtonHandlers.Add(TButtonHandler.Create);
+  TAndroidDialogCracker(FDialog).FButtonHandlers.Add(TButtonHandler.Create);
+
+  LRaisedValidationError := False;
+  try
+    TAndroidDialogCracker(FDialog).InternalShow(nil);
+  except
+    on E: Exception do
+      if E.Message.Contains('ao menos um deve possuir evento associado') then
+        LRaisedValidationError := True;
+  end;
+
+  Assert.IsFalse(LRaisedValidationError,
+    'InternalShow nao deve rejeitar multiplos botoes sem handler');
+end;
+
+{ TAndroidDialogCloseTests }
+
+procedure TAndroidDialogCloseTests.Setup;
+begin
+  FDialog := TAndroidDialog.Create;
+  FHandlerCallCount := 0;
+  FHandlerSender := nil;
+end;
+
+procedure TAndroidDialogCloseTests.TearDown;
+begin
+  FDialog := nil;
+end;
+
+procedure TAndroidDialogCloseTests.OnClickHandler(Sender: TObject);
+begin
+  Inc(FHandlerCallCount);
+  FHandlerSender := Sender;
+end;
+
+procedure TAndroidDialogCloseTests.TestButtonClick_CallsHandlerAndClearsTagObject;
+// R7: usa TButtonHandler (nao TButtonHandlerObj).
+var
+  LOverlay  : TLayout;
+  LBtnLayout: TFlowLayout;
+  LBtn      : TButton;
+  LObj      : TButtonHandler;
+begin
+  LOverlay   := TLayout.Create(nil);
+  LBtnLayout := TFlowLayout.Create(LOverlay);
+  LBtnLayout.Parent := LOverlay;
+  LBtn := TButton.Create(LBtnLayout);
+  LBtn.Parent := LBtnLayout;
+
+  LObj := TButtonHandler.Create;
+  try
+    LObj.ClickHandler := OnClickHandler;
+    LObj.Overlay := LOverlay;
+    LBtn.TagObject := LObj;
+
+    TAndroidDialogCracker(FDialog).FBtnLayout := LBtnLayout;
+    TAndroidDialogCracker(FDialog).ButtonClick(LBtn);
+
+    Assert.AreEqual(1, FHandlerCallCount, 'ClickHandler deve ter sido chamado exatamente 1 vez');
+    Assert.IsNull(LObj.Overlay, 'Overlay deve ser nil apos ButtonClick');
+  finally
+    LObj.Free;
+  end;
+end;
+
+procedure TAndroidDialogCloseTests.TestButtonClick_WhenHandlerRaises_OverlayIsStillFreed;
+// R7: usa TButtonHandler. Apos excecao: overlay fechado, LObj.Overlay = nil.
+var
+  LOverlay  : TLayout;
+  LBtnLayout: TFlowLayout;
+  LBtn      : TButton;
+  LObj      : TButtonHandler;
+begin
+  LOverlay   := TLayout.Create(nil);
+  LBtnLayout := TFlowLayout.Create(LOverlay);
+  LBtnLayout.Parent := LOverlay;
+  LBtn := TButton.Create(LBtnLayout);
+  LBtn.Parent := LBtnLayout;
+
+  LObj := TButtonHandler.Create;
+  try
+    LObj.AnonymousHandler :=
+      procedure
+      begin
+        raise Exception.Create('Erro simulado no handler');
+      end;
+    LObj.Overlay := LOverlay;
+    LBtn.TagObject := LObj;
+
+    TAndroidDialogCracker(FDialog).FBtnLayout := LBtnLayout;
+
+    var LExceptionPropagated := False;
+    try
+      TAndroidDialogCracker(FDialog).ButtonClick(LBtn);
+    except
+      on E: Exception do
+        if E.Message = 'Erro simulado no handler' then
+          LExceptionPropagated := True;
+    end;
+    Assert.IsTrue(LExceptionPropagated, 'A excecao do handler deve propagar');
+    Assert.IsNull(LObj.Overlay, 'Overlay deve ser nil mesmo apos excecao no handler');
+  finally
+    LObj.Free;
+  end;
+end;
+
+procedure TAndroidDialogCloseTests.TestCloseDialog_FreesAllRemainingTagObjects;
+// R7: CloseDialog deve nular Overlay de TODOS os handlers dos botoes restantes.
+var
+  LOverlay    : TLayout;
+  LBtnLayout  : TFlowLayout;
+  LBtn        : array[0..2] of TButton;
+  LObj        : array[0..2] of TButtonHandler;
+  I           : Integer;
+  LTagNilCount: Integer;
+begin
+  LOverlay   := TLayout.Create(nil);
+  LBtnLayout := TFlowLayout.Create(LOverlay);
+  LBtnLayout.Parent := LOverlay;
+
+  for I := 0 to 2 do
+  begin
+    LBtn[I] := TButton.Create(LBtnLayout);
+    LBtn[I].Parent := LBtnLayout;
+    LObj[I] := TButtonHandler.Create;
+    LObj[I].Overlay := LOverlay;
+    LBtn[I].TagObject := LObj[I];
+  end;
+
+  TAndroidDialogCracker(FDialog).FBtnLayout := LBtnLayout;
+
+  LTagNilCount := 0;
+  for I := 0 to LBtnLayout.ChildrenCount - 1 do
+    if (LBtnLayout.Children[I] is TButton) and
+       not Assigned(TButton(LBtnLayout.Children[I]).TagObject) then
+      Inc(LTagNilCount);
+  Assert.AreEqual(0, LTagNilCount,
+    'Antes do CloseDialog todos os TagObjects devem estar atribuidos');
+
+  TAndroidDialogCracker(FDialog).CloseDialog(LOverlay);
+
+  Assert.IsNull(TAndroidDialogCracker(FDialog).FBtnLayout,
+    'FBtnLayout deve ser nil apos CloseDialog');
+
+  for I := 0 to 2 do
+  begin
+    Assert.IsNull(LObj[I].Overlay,
+      'LObj[' + IntToStr(I) + '].Overlay deve ser nil apos CloseDialog');
+    LObj[I].Free;
+  end;
+end;
+
+{ TAndroidDialogLayoutTests }
+
+procedure TAndroidDialogLayoutTests.Setup;
+begin
+  FDialog := TAndroidDialog.Create;
+end;
+
+procedure TAndroidDialogLayoutTests.TearDown;
+begin
+  FDialog := nil;
+end;
+
+procedure TAndroidDialogLayoutTests.TestBuildOverlay_HasContentsAlign;
+var
+  LForm   : TCommonCustomForm;
+  LOverlay: TLayout;
+  LBgRect : TRectangle;
+begin
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    LOverlay := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
+    try
+      Assert.AreEqual(TAlignLayout.Contents, LOverlay.Align,
+        'Overlay deve ter Align = Contents');
+    finally
+      LOverlay.Parent := nil;
+      LOverlay.Free;
+    end;
+  finally
+    LForm.Free;
+  end;
+end;
+
+procedure TAndroidDialogLayoutTests.TestBuildDialogRect_WidthIsScaled;
+var
+  LForm      : TCommonCustomForm;
+  LOverlay   : TLayout;
+  LDialogRect: TRectangle;
+  LBgRect    : TRectangle;
+  LExpected  : Integer;
+begin
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    LOverlay := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
+    try
+      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay, TAndroidDialogCracker(FDialog).GetPlatformScale);
+      LExpected := Round(300 * TAndroidDialogCracker(FDialog).GetPlatformScale);
+      Assert.IsTrue(Abs(Round(LDialogRect.Width) - LExpected) <= 1,
+        'Width deve ser ~' + IntToStr(LExpected) + ' (+-1)');
+    finally
+      LOverlay.Parent := nil;
+      LOverlay.Free;
+    end;
+  finally
+    LForm.Free;
+  end;
+end;
+
+procedure TAndroidDialogLayoutTests.TestBuildButtons_ChildCountMatchesHandlers;
+var
+  LForm      : TCommonCustomForm;
+  LOverlay   : TLayout;
+  LDialogRect: TRectangle;
+  LBgRect    : TRectangle;
+begin
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+
+  TAndroidDialogCracker(FDialog).FButtonHandlers.Add(TButtonHandler.Create);
+  TAndroidDialogCracker(FDialog).FButtonHandlers.Add(TButtonHandler.Create);
+  TAndroidDialogCracker(FDialog).FButtonHandlers.Add(TButtonHandler.Create);
+
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    LOverlay    := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
+    LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay, TAndroidDialogCracker(FDialog).GetPlatformScale);
+    TAndroidDialogCracker(FDialog).BuildButtons(LOverlay, LDialogRect, TAndroidDialogCracker(FDialog).GetPlatformScale);
+
+    Assert.AreEqual(3, TAndroidDialogCracker(FDialog).FBtnLayout.ChildrenCount,
+      '3 handlers deve gerar 3 botoes em FBtnLayout');
+
+    TAndroidDialogCracker(FDialog).CloseDialog(LOverlay);
+  finally
+    LForm.Free;
+  end;
+end;
+
+procedure TAndroidDialogLayoutTests.TestInternalShow_SubMethodsRun_FBtnLayoutAssigned;
+var
+  LForm : TCommonCustomForm;
+  LMsg  : string;
+begin
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+
+  TAndroidDialogCracker(FDialog).FButtonHandlers.Add(TButtonHandler.Create);
+
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    LMsg := '';
+    try
+      TAndroidDialogCracker(FDialog).InternalShow(LForm);
+    except
+      on E: Exception do
+        LMsg := E.Message;
+    end;
+
+    if LMsg <> '' then
+      Assert.Fail('InternalShow raised unexpected exception: ' + LMsg)
+    else
+      Assert.IsNotNull(TAndroidDialogCracker(FDialog).FBtnLayout,
+        'FBtnLayout deve estar atribuido apos InternalShow');
+  finally
+    if Assigned(TAndroidDialogCracker(FDialog).FBtnLayout) then
     begin
-      TAndroidDialogCracker(FDialog).InternalShow(nil);
-    end,
-    Exception,
-    'O diálogo suporta no máximo 4 botões.');
+      var LOverlayPtr := TLayout(TAndroidDialogCracker(FDialog).FBtnLayout.Parent.Parent);
+      TAndroidDialogCracker(FDialog).CloseDialog(LOverlayPtr);
+    end;
+    LForm.Free;
+  end;
+end;
+
+procedure TAndroidDialogLayoutTests.TestCalculateFinalHeight_WithTitle_GreaterThanWithout;
+var
+  LBodyLayout     : TLayout;
+  LBtnLayoutMock  : TFlowLayout;
+  LHeightWithTitle: Single;
+  LHeightNoTitle  : Single;
+begin
+  LBodyLayout := TLayout.Create(nil);
+  LBodyLayout.Height := 100;
+  LBtnLayoutMock := TFlowLayout.Create(nil);
+  LBtnLayoutMock.Height := Round(56 * TAndroidDialogCracker(FDialog).GetPlatformScale);
+
+  try
+    TAndroidDialogCracker(FDialog).FBtnLayout := LBtnLayoutMock;
+
+    TAndroidDialogCracker(FDialog).FTitle := 'Test Title';
+    LHeightWithTitle := TAndroidDialogCracker(FDialog).CalculateFinalHeight(
+      LBodyLayout, TAndroidDialogCracker(FDialog).GetPlatformScale, False);
+
+    TAndroidDialogCracker(FDialog).FTitle := '';
+    LHeightNoTitle := TAndroidDialogCracker(FDialog).CalculateFinalHeight(
+      LBodyLayout, TAndroidDialogCracker(FDialog).GetPlatformScale, False);
+
+    TAndroidDialogCracker(FDialog).FBtnLayout := nil;
+
+    Assert.IsTrue(LHeightWithTitle > LHeightNoTitle,
+      'Dialog com titulo deve ser mais alto que sem titulo');
+  finally
+    LBtnLayoutMock.Free;
+    LBodyLayout.Free;
+  end;
+end;
+
+procedure TAndroidDialogLayoutTests.TestBuildDialogRect_UsesBorderRadius;
+var
+  LForm      : TCommonCustomForm;
+  LOverlay   : TLayout;
+  LDialogRect: TRectangle;
+  LBgRect    : TRectangle;
+begin
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+
+  TAndroidDialogCracker(FDialog).SetBorderRadius(8);
+
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    LOverlay := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
+    try
+      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay, TAndroidDialogCracker(FDialog).GetPlatformScale);
+      Assert.AreEqual(Single(8), LDialogRect.XRadius,
+        'XRadius deve refletir o BorderRadius configurado');
+    finally
+      LOverlay.Parent := nil;
+      LOverlay.Free;
+    end;
+  finally
+    LForm.Free;
+  end;
+end;
+
+procedure TAndroidDialogLayoutTests.TestBuildBody_UsesFontSize;
+var
+  LForm       : TCommonCustomForm;
+  LOverlay    : TLayout;
+  LDialogRect : TRectangle;
+  LBgRect     : TRectangle;
+  LIconPresent: Boolean;
+  LBodyLayout : TLayout;
+  LLabel      : TLabel;
+  I           : Integer;
+begin
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+
+  TAndroidDialogCracker(FDialog).SetFontSize(18);
+  TAndroidDialogCracker(FDialog).FMessage := 'Test message';
+
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    LOverlay    := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
+    try
+      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay, TAndroidDialogCracker(FDialog).GetPlatformScale);
+      TAndroidDialogCracker(FDialog).BuildBody(
+        LDialogRect, TAndroidDialogCracker(FDialog).GetPlatformScale, LIconPresent, LBodyLayout);
+
+      LLabel := nil;
+      for I := 0 to LBodyLayout.ChildrenCount - 1 do
+        if LBodyLayout.Children[I] is TLabel then
+        begin
+          LLabel := TLabel(LBodyLayout.Children[I]);
+          Break;
+        end;
+
+      Assert.IsNotNull(LLabel, 'LBodyLayout deve conter um TLabel de mensagem');
+      Assert.AreEqual(Single(18), LLabel.TextSettings.Font.Size,
+        'Font.Size do label deve ser 18 conforme SetFontSize');
+    finally
+      LOverlay.Parent := nil;
+      LOverlay.Free;
+    end;
+  finally
+    LForm.Free;
+  end;
 end;
 
 initialization
   TDUnitX.RegisterTestFixture(TAndroidDialogTests);
+  TDUnitX.RegisterTestFixture(TAndroidDialogCloseTests);
+  TDUnitX.RegisterTestFixture(TAndroidDialogLayoutTests);
 
 end.

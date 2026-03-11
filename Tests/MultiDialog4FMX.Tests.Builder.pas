@@ -49,6 +49,12 @@ type
 
     [Test]
     procedure TestShow_ReturnsDialogBuilder;
+
+    [Test]
+    procedure TestSetFontSize_StoresValue;
+
+    [Test]
+    procedure TestSetBorderRadius_StoresValue;
   end;
 
 implementation
@@ -139,6 +145,18 @@ var
 begin
   Result := FDialog.Buttons.AddButton('OK').&End.Show;
   Assert.IsNotNull(Result);
+end;
+
+procedure TDialogBuilderTests.TestSetFontSize_StoresValue;
+begin
+  FDialog.SetFontSize(18);
+  Assert.AreEqual(Single(18), FDialog.FontSize);
+end;
+
+procedure TDialogBuilderTests.TestSetBorderRadius_StoresValue;
+begin
+  FDialog.SetBorderRadius(8);
+  Assert.AreEqual(Single(8), FDialog.BorderRadius);
 end;
 
 initialization

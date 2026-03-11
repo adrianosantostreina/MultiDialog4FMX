@@ -159,7 +159,6 @@
         <DCCReference Include="..\src\MultiDialog4FMX.Base.pas"/>
         <DCCReference Include="..\src\MultiDialog4FMX.Factory.pas"/>
         <DCCReference Include="..\src\MultiDialog4FMX.Android.pas"/>
-        <DCCReference Include="..\src\MultiDialog4FMX.Types.pas"/>
         <DCCReference Include="MultiDialog4FMX.Tests.Mocks.pas"/>
         <DCCReference Include="MultiDialog4FMX.Tests.Builder.pas"/>
         <DCCReference Include="MultiDialog4FMX.Tests.Buttons.pas"/>
