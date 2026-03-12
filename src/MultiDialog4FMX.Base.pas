@@ -22,6 +22,7 @@ type
   TButtonHandler = class
   public
     class var FInstanceCount: Integer;
+  public
     Text: string;
     ClickHandler: TNotifyEvent;
     TapHandler: TTapEvent;

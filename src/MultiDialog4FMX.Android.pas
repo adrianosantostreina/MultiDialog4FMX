@@ -43,6 +43,7 @@ type
     procedure BuildButtons(const AOverlay: TLayout; const ADialogRect: TRectangle);
     function  CalculateFinalHeight(const ABodyLayout: TLayout;
                                    const AIconPresent: Boolean): Single;
+    procedure PaintColoredBtn(Sender: TObject; Canvas: TCanvas; const ARect: TRectF);
   end;
 
 implementation
@@ -275,11 +276,16 @@ end;
 procedure TAndroidDialog.BuildButtons(const AOverlay: TLayout;
   const ADialogRect: TRectangle);
 var
-  LBtnLayout   : TFlowLayout;
-  LWidthButtons: Single;
-  LRec         : TButtonHandler;
-  LBtn         : TButton;
-  I            : Integer;
+  LBtnLayout    : TFlowLayout;
+  LWidthButtons : Single;
+  LCurrentWidth : Single;
+  LRec          : TButtonHandler;
+  LBtn          : TButton;
+  LColorRect    : TRectangle;
+  LIsResponsive : Boolean;
+  LMarginRight  : Integer;
+  LMarginTop    : Integer;
+  I             : Integer;
 begin
   LBtnLayout := TFlowLayout.Create(ADialogRect);
   LBtnLayout.Parent := ADialogRect;
@@ -290,12 +296,14 @@ begin
   LBtnLayout.Margins.Rect := RectF(4, 0, 4, 4);
   FBtnLayout := LBtnLayout;
 
-  // Responsive: 4 buttons in portrait — use 2 rows
-  if (FButtonHandlers.Count = 4) and (Screen.Width < Screen.Height) and
-     (Round(Screen.Width / GetPlatformScale) < C_BaseResponsiveBreak) then
+  // Responsive: 4 buttons in portrait — 3+1 layout (3 buttons row 1, 1 full-width row 2)
+  LIsResponsive := (FButtonHandlers.Count = 4) and (Screen.Width < Screen.Height) and
+                   (Screen.Width < C_BaseResponsiveBreak);
+
+  if LIsResponsive then
   begin
     LBtnLayout.Height := C_BaseButtonsHeight * 2;
-    LWidthButtons := Round(C_BaseDialogWidth / 3) - 16;
+    LWidthButtons := Round(C_BaseDialogWidth / 3) - 16;  // = 84 dp (3×84+2×8=268 dp)
   end
   else if FButtonHandlers.Count = 1 then
     LWidthButtons := C_BaseDialogWidth - 32
@@ -305,44 +313,82 @@ begin
   for I := 0 to FButtonHandlers.Count - 1 do
   begin
     LRec := FButtonHandlers[I];
-    LBtn := TButton.Create(LBtnLayout);
-    LBtn.Parent := LBtnLayout;
-    LBtn.Text := LRec.Text;
-    LBtn.TextSettings.Font.Size := FFontSize;
-    LBtn.StyledSettings := [TStyledSetting.Style];
-    LBtn.Height := C_BaseBtnHeight;
 
-    if (FButtonHandlers.Count = 4) and (Screen.Width < Screen.Height) and
-       (Round(Screen.Width / GetPlatformScale) < C_BaseResponsiveBreak) and (I = 3) then
+    if LIsResponsive then
     begin
-      LBtn.Width := C_BaseDialogWidth - 32;
-      LBtn.Margins.Top := 8;
+      if I = 3 then
+      begin
+        // 4th button: full-width second row (268 dp = 3×84+2×8)
+        LCurrentWidth := C_BaseDialogWidth - 32;
+        LMarginRight  := 0;
+        LMarginTop    := 8;
+      end
+      else
+      begin
+        LCurrentWidth := LWidthButtons;
+        LMarginRight  := IfThen(I < 2, 8, 0);  // 0,1 → gap; 2 → no gap (end of row)
+        LMarginTop    := 0;
+      end;
     end
     else
-      LBtn.Width := LWidthButtons;
-
-    if I < FButtonHandlers.Count - 1 then
-      LBtn.Margins.Right := 8
-    else
-      LBtn.Margins.Right := 0;
-
-    LBtn.TintColor := LRec.Color;
-
-    if LRec.StyleLookup <> '' then
     begin
-      LBtn.StyleLookup := LRec.StyleLookup;
-      LBtn.StyledSettings := [TStyledSetting.Family, TStyledSetting.Style,
-                               TStyledSetting.FontColor, TStyledSetting.Size];
+      LCurrentWidth := LWidthButtons;
+      LMarginRight  := IfThen(I < FButtonHandlers.Count - 1, 8, 0);
+      LMarginTop    := 0;
     end;
 
-    // R7: assign overlay directly to handler record (no separate TButtonHandlerObj)
     LRec.Overlay := AOverlay;
-    LBtn.TagObject := LRec;
 
-    if Assigned(LRec.TapHandler) then
-      LBtn.OnTap := ButtonTap
+    if LRec.Color <> TAlphaColor(0) then
+    begin
+      // Colored button: canvas-painted TRectangle — avoids Android TLabel/TBrush
+      // rendering issue where all buttons inherit the last button's text and color.
+      LColorRect := TRectangle.Create(LBtnLayout);
+      LColorRect.Parent        := LBtnLayout;
+      LColorRect.Fill.Kind     := TBrushKind.None;   // suppress default fill; OnPainting draws it
+      LColorRect.Stroke.Kind   := TBrushKind.None;
+      LColorRect.XRadius       := 4;
+      LColorRect.YRadius       := 4;
+      LColorRect.Height        := C_BaseBtnHeight;
+      LColorRect.Width         := LCurrentWidth;
+      LColorRect.HitTest       := True;
+      LColorRect.Margins.Right := LMarginRight;
+      LColorRect.Margins.Top   := LMarginTop;
+
+      LColorRect.Tag        := NativeInt(LRec.Color);  // per-instance color for paint handler
+      LColorRect.TagString  := LRec.Text;              // per-instance text for paint handler
+      LColorRect.OnPainting := PaintColoredBtn;        // self-contained paint
+
+      LColorRect.TagObject  := LRec;                   // click handler (unchanged)
+      LColorRect.OnClick    := ButtonClick;
+    end
     else
-      LBtn.OnClick := ButtonClick;
+    begin
+      // Default or styled button: TButton
+      LBtn := TButton.Create(LBtnLayout);
+      LBtn.Parent     := LBtnLayout;
+      LBtn.Text       := LRec.Text;
+      LBtn.TextSettings.Font.Size := FFontSize;
+      LBtn.StyledSettings := [TStyledSetting.Style];
+      LBtn.Height     := C_BaseBtnHeight;
+      LBtn.Width      := LCurrentWidth;
+      LBtn.Margins.Right := LMarginRight;
+      LBtn.Margins.Top   := LMarginTop;
+
+      if LRec.StyleLookup <> '' then
+      begin
+        LBtn.StyleLookup    := LRec.StyleLookup;
+        LBtn.StyledSettings := [TStyledSetting.Family, TStyledSetting.Style,
+                                 TStyledSetting.FontColor, TStyledSetting.Size];
+      end;
+
+      LBtn.TagObject := LRec;
+
+      if Assigned(LRec.TapHandler) then
+        LBtn.OnTap   := ButtonTap
+      else
+        LBtn.OnClick := ButtonClick;
+    end;
   end;
 end;
 
@@ -358,7 +404,7 @@ begin
 
   Result := Max(Result, C_BaseMinDialogHeight);
 
-  LMaxScreenHeight := Round(Screen.Size.Height / GetPlatformScale) * 0.9;
+  LMaxScreenHeight := Screen.Size.Height * 0.7;  // 70% in logical dp — no scale division
   if Result > LMaxScreenHeight then
     Result := LMaxScreenHeight;
 end;
@@ -391,8 +437,7 @@ end;
 procedure TAndroidDialog.CloseDialog(AOverlay: TLayout);
 var
   I          : Integer;
-  LBtn       : TButton;
-  LObj       : TButtonHandler;
+  LChild     : TFmxObject;
   LKeepAlive : IDialogBuilder;
 begin
   if not Assigned(AOverlay) then
@@ -404,18 +449,17 @@ begin
   // Nil the overlay reference on each handler.
   // Handlers are owned by FButtonHandlers (TObjectList OwnsObjects=True) — do NOT free here.
   // FMX does NOT free TagObject when destroying controls.
+  // Works for both TButton and TRectangle (colored button variant).
   if Assigned(FBtnLayout) then
     for I := 0 to FBtnLayout.ChildrenCount - 1 do
-      if FBtnLayout.Children[I] is TButton then
+    begin
+      LChild := FBtnLayout.Children[I];
+      if LChild.TagObject is TButtonHandler then
       begin
-        LBtn := TButton(FBtnLayout.Children[I]);
-        if Assigned(LBtn.TagObject) then
-        begin
-          LObj := LBtn.TagObject as TButtonHandler;
-          LBtn.TagObject := nil;
-          LObj.Overlay := nil;
-        end;
+        TButtonHandler(LChild.TagObject).Overlay := nil;
+        LChild.TagObject := nil;
       end;
+    end;
   FBtnLayout := nil;
 
   AOverlay.Parent := nil;
@@ -446,22 +490,26 @@ procedure TAndroidDialog.ButtonClick(Sender: TObject);
 var
   Obj     : TButtonHandler;
   LOverlay: TLayout;
+  LFmxObj : TFmxObject;
 begin
-  if not ((Sender is TButton) and Assigned(TButton(Sender).TagObject)) then
-    Exit;
+  if not (Sender is TFmxObject) then Exit;
+  LFmxObj := TFmxObject(Sender);
+  if not (LFmxObj.TagObject is TButtonHandler) then Exit;
 
-  Obj := TButton(Sender).TagObject as TButtonHandler;
+  Obj      := TButtonHandler(LFmxObj.TagObject);
   LOverlay := Obj.Overlay;
 
   // Clear TagObject BEFORE calling handler — prevents use-after-free when
   // CloseDialog destroys the control hierarchy.
-  TButton(Sender).TagObject := nil;
+  LFmxObj.TagObject := nil;
 
   try
     if Assigned(Obj.ClickHandler) then
       Obj.ClickHandler(Sender);
     if Assigned(Obj.AnonymousHandler) then
       Obj.AnonymousHandler();
+    if Assigned(Obj.TapHandler) then
+      Obj.TapHandler(Sender, PointF(0, 0));  // fallback for colored buttons with TapHandler
   finally
     Obj.Overlay := nil;   // handler owned by FButtonHandlers — do NOT free
     CloseDialog(LOverlay);
@@ -472,14 +520,16 @@ procedure TAndroidDialog.ButtonTap(Sender: TObject; const Point: TPointF);
 var
   Obj     : TButtonHandler;
   LOverlay: TLayout;
+  LFmxObj : TFmxObject;
 begin
-  if not ((Sender is TButton) and Assigned(TButton(Sender).TagObject)) then
-    Exit;
+  if not (Sender is TFmxObject) then Exit;
+  LFmxObj := TFmxObject(Sender);
+  if not (LFmxObj.TagObject is TButtonHandler) then Exit;
 
-  Obj := TButton(Sender).TagObject as TButtonHandler;
+  Obj      := TButtonHandler(LFmxObj.TagObject);
   LOverlay := Obj.Overlay;
 
-  TButton(Sender).TagObject := nil;
+  LFmxObj.TagObject := nil;
 
   try
     if Assigned(Obj.TapHandler) then
@@ -490,5 +540,35 @@ begin
   end;
 end;
 
+
+procedure TAndroidDialog.PaintColoredBtn(Sender: TObject; Canvas: TCanvas;
+  const ARect: TRectF);
+var
+  LRect : TRectangle;
+  LColor: TAlphaColor;
+  LState: TCanvasSaveState;
+begin
+  if not (Sender is TRectangle) then
+    Exit;
+
+  LRect  := TRectangle(Sender);
+  LColor := TAlphaColor(LRect.Tag);
+
+  LState := Canvas.SaveState;
+  try
+    // Draw colored rounded background
+    Canvas.Fill.Kind  := TBrushKind.Solid;
+    Canvas.Fill.Color := LColor;
+    Canvas.FillRect(ARect, LRect.XRadius, LRect.YRadius, AllCorners, 1.0);
+
+    // Draw white centered text (Canvas.Fill.Color is used as text color by FillText)
+    Canvas.Fill.Color := TAlphaColorRec.White;
+    Canvas.Font.Size  := FFontSize;
+    Canvas.FillText(ARect, LRect.TagString, False, 1.0, [], TTextAlign.Center,
+                    TTextAlign.Center);
+  finally
+    Canvas.RestoreState(LState);
+  end;
+end;
 
 end.
