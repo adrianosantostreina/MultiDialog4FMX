@@ -12,6 +12,7 @@ uses
 
 type
   TMultiDialogType = (mdtCustom, mdtWarning, mdtError, mdtInformation, mdtConfirmation, mdtQuestion);
+  TDialogAnimation = (danNone, danFade, danScale, danSlide);
 
   IDialogButtonsBuilder = interface;
   /// <summary>
@@ -49,6 +50,11 @@ type
     /// Define o raio de arredondamento das bordas do diálogo.
     /// </summary>
     function SetBorderRadius(const ARadius: Single): IDialogBuilder;
+
+    /// <summary>
+    /// Define a animação de entrada/saída.
+    /// </summary>
+    function SetAnimation(const AAnimation: TDialogAnimation): IDialogBuilder;
 
     /// <summary>
     /// Acessa o construtor de botões.
