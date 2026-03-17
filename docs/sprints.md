@@ -46,7 +46,8 @@
 | R12 | Implementar Windows/macOS | `CreateDialog` lança exceção em plataformas não-Android; criar implementação Desktop |
 | R13 | Ícone customizável | Permitir `SetIcon(TBitmap)` ou `SetSVG(string)` além dos 5 tipos predefinidos |
 | R14 | `TDialogResultProc` — callback de resultado | Implementar callback tipado de resultado (era o propósito original da `Types.pas` removida na Sprint 1) |
-| R15 | Remover arquivo órfão `Proj1` | `Samples/init/` contém dois `.dpr` — `Proj1` é sobreposição indevida; remover e auditar todos os samples |
+| ✅ R15 | Remover arquivo órfão `Proj1` | `Samples/init/` contém dois `.dpr` — `Proj1` é sobreposição indevida; remover e auditar todos os samples |
+| ✅ R16 | Refatoração profissional `TButtonHandler` | Substituir hotfix de dois blocos `public` (commit `1119074`) por campos privados com prefixo `F` + propriedades públicas. `FInstanceCount` como `class var` explícito em seção `private`. Arquivo: `src/MultiDialog4FMX.Base.pas`. Verificar `ButtonClick`, `ButtonTap`, `PaintColoredBtn` em `Android.pas`. Spec: `docs/REFATORACAO_PROFISSIONAL_BUTTONHANDLER.md` |
 
 ---
 
@@ -54,11 +55,36 @@
 
 | # | Item | Descrição |
 |---|---|---|
-| R16 | Animações de entrada/saída | Fade-in/slide-up no overlay; fade-out ao fechar |
-| R17 | Timeout de botão | `AddButton('OK', 5)` — fecha automaticamente após N segundos com contagem regressiva visível |
-| R18 | Acessibilidade | `ContentDescription` nos controles para TalkBack (Android) e leitores de tela equivalentes |
-| R19 | Internacionalização | Externalizar strings de erro para `resourcestring` (PT-BR e EN mínimo) |
-| R20 | Publicação GetIt | Preparar o projeto para o GetIt Package Manager do RAD Studio |
+| R17 | Animações de entrada/saída | Ver spec completa abaixo. Spec: `docs/PLANO_ANIMACOES_DIALOGO.md` |
+| R18 | Timeout de botão | `AddButton('OK', 5)` — fecha automaticamente após N segundos com contagem regressiva visível |
+| R19 | Acessibilidade | `ContentDescription` nos controles para TalkBack (Android) e leitores de tela equivalentes |
+| R20 | Internacionalização | Externalizar strings de erro para `resourcestring` (PT-BR e EN mínimo) |
+| R21 | Publicação GetIt | Preparar o projeto para o GetIt Package Manager do RAD Studio |
+
+### R17 — Spec de Animações de Entrada/Saída
+
+**API:**
+```pascal
+TMultiDialog4FMX.Dialog
+  .SetAnimation(danScale) // danNone, danFade, danScale, danSlide
+  .Show;
+```
+
+**`Interfaces.pas`:** Adicionar enum `TDialogAnimation = (danNone, danFade, danScale, danSlide)` e método `SetAnimation(AAnimation: TDialogAnimation): IDialogBuilder`
+
+**`Base.pas`:** Adicionar campo `FAnimation: TDialogAnimation` e implementação de `SetAnimation`
+
+**`Android.pas` — Entrada** (após criação do `LDialogRect`, antes de finalizar `InternalShow`):
+- `danFade`: `TAnimator.AnimateFloat(LOverlay, 'Opacity', 1, 0.25)`
+- `danScale`: inicializar `LDialogRect.Scale.X/Y` em 0.8; `TAnimator.AnimateFloat(LDialogRect, 'Scale.X', 1.0, 0.3, TAnimationType.Out, TInterpolationType.Back)` + idem `Scale.Y`
+- `danSlide`: animar `Position.Y` de `-LDialogRect.Height` até posição final
+
+**`Android.pas` — Saída** (modificar `CloseDialog`):
+- Se `FAnimation <> danNone`, executar animação reversa antes de destruir overlay
+- Usar callback `OnFinished` da animação para executar `AOverlay.DisposeOf` e `FKeepAlive := nil`
+- Garantir que `FKeepAlive := nil` ocorra somente no callback (evita AV durante transição)
+
+**Critérios de aceite:** sem flickering na abertura; `FKeepAlive` liberado apenas após conclusão da animação de saída; 0 novos leaks
 
 ---
 

@@ -20,18 +20,28 @@ const
 type
   // Guarda texto + handler click ou tap
   TButtonHandler = class
-  public
+  private
     class var FInstanceCount: Integer;
+  private
+    FText: string;
+    FClickHandler: TNotifyEvent;
+    FTapHandler: TTapEvent;
+    FAnonymousHandler: TProc;
+    FColor: TAlphaColor;
+    FStyleLookup: string;
+    FOverlay: TLayout;
   public
-    Text: string;
-    ClickHandler: TNotifyEvent;
-    TapHandler: TTapEvent;
-    AnonymousHandler: TProc;
-    Color: TAlphaColor;
-    StyleLookup: string;
-    Overlay: TLayout;
     constructor Create;
     destructor Destroy; override;
+
+    class property InstanceCount: Integer read FInstanceCount;
+    property Text: string read FText write FText;
+    property ClickHandler: TNotifyEvent read FClickHandler write FClickHandler;
+    property TapHandler: TTapEvent read FTapHandler write FTapHandler;
+    property AnonymousHandler: TProc read FAnonymousHandler write FAnonymousHandler;
+    property Color: TAlphaColor read FColor write FColor;
+    property StyleLookup: string read FStyleLookup write FStyleLookup;
+    property Overlay: TLayout read FOverlay write FOverlay;
   end;
   TButtonHandlerList = TObjectList<TButtonHandler>;
 
@@ -44,6 +54,7 @@ type
     FMsgType: TMultiDialogType;
     FFontSize: Single;
     FBorderRadius: Single;
+    FAnimation: TDialogAnimation;
     // Cada plataforma implementa sua exibição
     procedure InternalShow(const AForm: TCommonCustomForm); virtual; abstract;
     function ResolveParentForm(const AForm: TCommonCustomForm): TCommonCustomForm;
@@ -58,6 +69,7 @@ type
     function SetCancelable(const Value: Boolean): IDialogBuilder;
     function SetFontSize(const ASize: Single): IDialogBuilder;
     function SetBorderRadius(const ARadius: Single): IDialogBuilder;
+    function SetAnimation(const AAnimation: TDialogAnimation): IDialogBuilder;
     function Buttons: IDialogButtonsBuilder;
     function Show: IDialogBuilder; overload;
     function Show(const AForm: TCommonCustomForm): IDialogBuilder; overload;
@@ -153,6 +165,12 @@ end;
 function TDialogBase.SetBorderRadius(const ARadius: Single): IDialogBuilder;
 begin
   FBorderRadius := ARadius;
+  Result := Self;
+end;
+
+function TDialogBase.SetAnimation(const AAnimation: TDialogAnimation): IDialogBuilder;
+begin
+  FAnimation := AAnimation;
   Result := Self;
 end;
 

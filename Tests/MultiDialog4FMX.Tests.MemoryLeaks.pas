@@ -39,12 +39,12 @@ var
   Dialog : IDialogBuilder;
   LBefore: Integer;
 begin
-  LBefore := TButtonHandler.FInstanceCount;
+  LBefore := TButtonHandler.InstanceCount;
   Dialog := TMockDialogBase.Create;
   Dialog.SetTitle('Test');
   Dialog.SetMessage('Test Message');
   Dialog := nil; // releases interface, triggers Destroy -> FButtonHandlers freed
-  Assert.AreEqual(LBefore, TButtonHandler.FInstanceCount,
+  Assert.AreEqual(LBefore, TButtonHandler.InstanceCount,
     'No handlers created, count must not change');
 end;
 
@@ -55,18 +55,18 @@ var
   Mock    : TMockDialogBase;
   LBefore, LDuring: Integer;
 begin
-  LBefore := TButtonHandler.FInstanceCount;
+  LBefore := TButtonHandler.InstanceCount;
 
   Mock   := TMockDialogBase.Create;
   Dialog := Mock;
   Dialog.Buttons.AddButton('Test Button');
 
-  LDuring := TButtonHandler.FInstanceCount;
+  LDuring := TButtonHandler.InstanceCount;
   Assert.AreEqual(LBefore + 1, LDuring,
     'One handler should be alive while dialog exists');
 
   Dialog := nil;
-  Assert.AreEqual(LBefore, TButtonHandler.FInstanceCount,
+  Assert.AreEqual(LBefore, TButtonHandler.InstanceCount,
     'Handler count must return to baseline after dialog is destroyed');
 end;
 
@@ -77,7 +77,7 @@ var
   Mock    : TMockDialogBase;
   LBefore, LDuring: Integer;
 begin
-  LBefore := TButtonHandler.FInstanceCount;
+  LBefore := TButtonHandler.InstanceCount;
 
   Mock   := TMockDialogBase.Create;
   Dialog := Mock;
@@ -87,12 +87,12 @@ begin
     .AddButton('Button 3')
     .AddButton('Button 4');
 
-  LDuring := TButtonHandler.FInstanceCount;
+  LDuring := TButtonHandler.InstanceCount;
   Assert.AreEqual(LBefore + 4, LDuring,
     'Four handlers should be alive while dialog exists');
 
   Dialog := nil;
-  Assert.AreEqual(LBefore, TButtonHandler.FInstanceCount,
+  Assert.AreEqual(LBefore, TButtonHandler.InstanceCount,
     'Handler count must return to baseline after dialog is destroyed');
 end;
 
@@ -104,7 +104,7 @@ var
   TestValue: Integer;
   LBefore  : Integer;
 begin
-  LBefore   := TButtonHandler.FInstanceCount;
+  LBefore   := TButtonHandler.InstanceCount;
   TestValue := 0;
 
   Mock   := TMockDialogBase.Create;
@@ -119,7 +119,7 @@ begin
   Assert.AreEqual(42, TestValue, 'Anonymous handler must execute correctly');
 
   Dialog := nil;
-  Assert.AreEqual(LBefore, TButtonHandler.FInstanceCount,
+  Assert.AreEqual(LBefore, TButtonHandler.InstanceCount,
     'Handler count must return to baseline after dialog is destroyed');
 end;
 
@@ -130,7 +130,7 @@ var
   Mock   : TMockDialogBase;
   LBefore: Integer;
 begin
-  LBefore := TButtonHandler.FInstanceCount;
+  LBefore := TButtonHandler.InstanceCount;
 
   Mock   := TMockDialogBase.Create;
   Dialog := Mock;
@@ -138,11 +138,11 @@ begin
     .AddButton('Button 1')
     .AddButton('Button 2');
 
-  Assert.AreEqual(LBefore + 2, TButtonHandler.FInstanceCount,
+  Assert.AreEqual(LBefore + 2, TButtonHandler.InstanceCount,
     'Two handlers should be alive');
 
   Dialog := nil; // explicit release
-  Assert.AreEqual(LBefore, TButtonHandler.FInstanceCount,
+  Assert.AreEqual(LBefore, TButtonHandler.InstanceCount,
     'Both handlers must be freed when dialog is destroyed');
 end;
 
