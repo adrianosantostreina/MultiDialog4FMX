@@ -1,4 +1,4 @@
-unit MultiDialog4FMX.iOS;
+unit MultiDialog4FMX.Desktop;
 
 interface
 
@@ -6,7 +6,7 @@ uses
   MultiDialog4FMX.FMX;
 
 type
-  TiOSDialog = class(TFMXDialog);
+  TDesktopDialog = class(TFMXDialog);
 
 implementation
 

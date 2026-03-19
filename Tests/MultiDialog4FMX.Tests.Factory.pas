@@ -14,26 +14,26 @@ type
   public
     [Test]
     procedure TestCreateDialog_ReturnsNonNil;
-    
+
     [Test]
     procedure TestCreateDialog_ReturnsIDialogBuilder;
-    
+
     [Test]
     procedure TestCreateDialog_CanChainMethods;
-    
+
     {$IFDEF ANDROID}
     [Test]
     procedure TestCreateDialog_Android_CreatesCorrectType;
     {$ENDIF}
-    
+
     {$IF DEFINED(IOS)}
     [Test]
-    procedure TestCreateDialog_iOS_RaisesNotImplemented;
+    procedure TestCreateDialog_iOS_CreatesCorrectType;
     {$ENDIF}
-    
+
     {$IF NOT (DEFINED(ANDROID) OR DEFINED(IOS))}
     [Test]
-    procedure TestCreateDialog_UnsupportedPlatform_RaisesException;
+    procedure TestCreateDialog_Desktop_CreatesCorrectType;
     {$ENDIF}
   end;
 
@@ -42,6 +42,12 @@ implementation
 {$IFDEF ANDROID}
 uses
   MultiDialog4FMX.Android;
+{$ELSEIF DEFINED(IOS)}
+uses
+  MultiDialog4FMX.iOS;
+{$ELSE}
+uses
+  MultiDialog4FMX.Desktop;
 {$ENDIF}
 
 { TFactoryTests }
@@ -50,79 +56,57 @@ procedure TFactoryTests.TestCreateDialog_ReturnsNonNil;
 var
   Dialog: IDialogBuilder;
 begin
-  {$IFDEF ANDROID}
   Dialog := CreateDialog;
   Assert.IsNotNull(Dialog);
-  {$ELSE}
-  // On non-Android platforms, we expect an exception
-  Assert.Pass('Test skipped on this platform');
-  {$ENDIF}
 end;
 
 procedure TFactoryTests.TestCreateDialog_ReturnsIDialogBuilder;
 var
   Dialog: IDialogBuilder;
 begin
-  {$IFDEF ANDROID}
   Dialog := CreateDialog;
   Assert.IsNotNull(Dialog as IDialogBuilder);
-  {$ELSE}
-  Assert.Pass('Test skipped on this platform');
-  {$ENDIF}
 end;
 
 procedure TFactoryTests.TestCreateDialog_CanChainMethods;
 var
   Dialog: IDialogBuilder;
 begin
-  {$IFDEF ANDROID}
   Dialog := CreateDialog
     .SetTitle('Test')
     .SetMessage('Message')
     .SetCancelable(True);
-    
+
   Assert.IsNotNull(Dialog);
-  {$ELSE}
-  Assert.Pass('Test skipped on this platform');
-  {$ENDIF}
 end;
 
 {$IFDEF ANDROID}
 procedure TFactoryTests.TestCreateDialog_Android_CreatesCorrectType;
 var
   Dialog: IDialogBuilder;
-  AndroidDialog: TAndroidDialog;
 begin
   Dialog := CreateDialog;
-  
-  // Verify it's an Android dialog by checking if it supports the interface
   Assert.IsTrue(Supports(Dialog, IDialogBuilder));
 end;
 {$ENDIF}
 
 {$IF DEFINED(IOS)}
-procedure TFactoryTests.TestCreateDialog_iOS_RaisesNotImplemented;
+procedure TFactoryTests.TestCreateDialog_iOS_CreatesCorrectType;
+var
+  Dialog: IDialogBuilder;
 begin
-  Assert.WillRaise(
-    procedure
-    begin
-      CreateDialog;
-    end,
-    Exception,
-    'iOS não implementado ainda');
+  Dialog := CreateDialog;
+  Assert.IsTrue(Supports(Dialog, IDialogBuilder));
 end;
 {$ENDIF}
 
 {$IF NOT (DEFINED(ANDROID) OR DEFINED(IOS))}
-procedure TFactoryTests.TestCreateDialog_UnsupportedPlatform_RaisesException;
+procedure TFactoryTests.TestCreateDialog_Desktop_CreatesCorrectType;
+var
+  Dialog: IDialogBuilder;
 begin
-  Assert.WillRaise(
-    procedure
-    begin
-      CreateDialog;
-    end,
-    Exception,
-    'Plataforma não suportada');
+  Dialog := CreateDialog;
+  Assert.IsTrue(Dialog is TDesktopDialog);
 end;
 {$ENDIF}
 

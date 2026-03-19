@@ -1,4 +1,4 @@
-﻿unit MultiDialog4FMX.Factory;
+unit MultiDialog4FMX.Factory;
 
 interface
 
@@ -16,7 +16,7 @@ uses
 {$ELSEIF DEFINED(IOS)}
   MultiDialog4FMX.iOS;
 {$ELSE}
-  System.SysUtils;
+  MultiDialog4FMX.Desktop;
 {$ENDIF}
 
 function CreateDialog: IDialogBuilder;
@@ -24,10 +24,9 @@ begin
 {$IFDEF ANDROID}
   Result := TAndroidDialog.Create;
 {$ELSEIF DEFINED(IOS)}
-  raise Exception.Create('iOS não implementado ainda');
-  // Result := TiOSDialog.Create;
+  Result := TiOSDialog.Create;
 {$ELSE}
-  raise Exception.Create('Plataforma não suportada');
+  Result := TDesktopDialog.Create;
 {$ENDIF}
 end;
 
