@@ -183,7 +183,7 @@ var
   LMsgHeight    : Single;
   LMsgFont      : TFont;
 begin
-  AIconPresent := (FMsgType <> TMultiDialogType.mdtCustom);
+  AIconPresent := (FMsgType <> TMultiDialogType.mdtCustom) or (FCustomSVG <> '');
 
   LScrollBox := TVertScrollBox.Create(ADialogRect);
   LScrollBox.Parent := ADialogRect;
@@ -211,33 +211,30 @@ begin
     LIconPath.Width := C_BaseIconSize;
     LIconPath.Stroke.Kind := TBrushKind.None;
 
-    case FMsgType of
-      mdtWarning:
-      begin
-        LIconPath.Data.Data := SVG_WARNING;
-        LIconPath.Fill.Color := TAlphaColorRec.Gold;
+    // --- SVG ---
+    if FCustomSVG <> '' then
+      LIconPath.Data.Data := FCustomSVG
+    else
+      case FMsgType of
+        mdtWarning:      LIconPath.Data.Data := SVG_WARNING;
+        mdtError:        LIconPath.Data.Data := SVG_ERROR;
+        mdtInformation:  LIconPath.Data.Data := SVG_INFO;
+        mdtQuestion:     LIconPath.Data.Data := SVG_QUESTION;
+        mdtConfirmation: LIconPath.Data.Data := SVG_SUCCESS;
       end;
-      mdtError:
-      begin
-        LIconPath.Data.Data := SVG_ERROR;
-        LIconPath.Fill.Color := TAlphaColorRec.Red;
+
+    // --- Cor ---
+    if FCustomIconColor <> TAlphaColor(0) then
+      LIconPath.Fill.Color := FCustomIconColor
+    else
+      case FMsgType of
+        mdtWarning:      LIconPath.Fill.Color := TAlphaColorRec.Gold;
+        mdtError:        LIconPath.Fill.Color := TAlphaColorRec.Red;
+        mdtInformation:  LIconPath.Fill.Color := TAlphaColorRec.Dodgerblue;
+        mdtQuestion,
+        mdtConfirmation: LIconPath.Fill.Color := TAlphaColorRec.Limegreen;
+        mdtCustom:       LIconPath.Fill.Color := TAlphaColorRec.Gray;
       end;
-      mdtInformation:
-      begin
-        LIconPath.Data.Data := SVG_INFO;
-        LIconPath.Fill.Color := TAlphaColorRec.Dodgerblue;
-      end;
-      mdtQuestion:
-      begin
-        LIconPath.Data.Data := SVG_QUESTION;
-        LIconPath.Fill.Color := TAlphaColorRec.Limegreen;
-      end;
-      mdtConfirmation:
-      begin
-        LIconPath.Data.Data := SVG_SUCCESS;
-        LIconPath.Fill.Color := TAlphaColorRec.Limegreen;
-      end;
-    end;
   end;
 
   if FMessage <> EmptyStr then
@@ -481,6 +478,8 @@ begin
     if LObj is TLayout then
     begin
       LOverlay := TLayout(LObj);
+      if Assigned(FResultCallback) then
+        FResultCallback(mrCancel);
       // Defer CloseDialog: destroying the overlay inside a click handler leaves
       // the Win32 message pump in an inconsistent state (mouse capture stuck).
       // ForceQueue schedules execution after the current event returns.
@@ -513,6 +512,8 @@ begin
       Obj.AnonymousHandler();
     if Assigned(Obj.TapHandler) then
       Obj.TapHandler(Sender, PointF(0, 0));  // fallback for colored buttons with TapHandler
+    if Assigned(FResultCallback) then
+      FResultCallback(Obj.ModalResult);
   finally
     Obj.Overlay := nil;   // handler owned by FButtonHandlers — do NOT free
     TThread.ForceQueue(nil, procedure begin CloseDialog(LOverlay); end);
@@ -537,6 +538,8 @@ begin
   try
     if Assigned(Obj.TapHandler) then
       Obj.TapHandler(Sender, Point);
+    if Assigned(FResultCallback) then
+      FResultCallback(Obj.ModalResult);
   finally
     Obj.Overlay := nil;   // handler owned by FButtonHandlers — do NOT free
     TThread.ForceQueue(nil, procedure begin CloseDialog(LOverlay); end);

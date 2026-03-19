@@ -13,13 +13,14 @@ uses
 type
   TMultiDialogType = (mdtCustom, mdtWarning, mdtError, mdtInformation, mdtConfirmation, mdtQuestion);
   TDialogAnimation = (danNone, danFade, danScale, danSlide);
+  TDialogResultProc = reference to procedure(const AResult: TModalResult);
 
   IDialogButtonsBuilder = interface;
   /// <summary>
   /// Interface para construção fluente de diálogos.
   /// </summary>
   IDialogBuilder = interface
-    ['{D4F82B1C-3E97-4A5D-B2C0-8F1E5D9A6703}']
+    ['{B7E3A1C5-4F82-4D9E-A3B1-0C8E2F7D5A61}']
 
     /// <summary>
     /// Define o tipo do diálogo (ícone padrão).
@@ -57,6 +58,21 @@ type
     function SetAnimation(const AAnimation: TDialogAnimation): IDialogBuilder;
 
     /// <summary>
+    /// Define um SVG customizado para o ícone do diálogo.
+    /// </summary>
+    function SetIcon(const ASVG: string): IDialogBuilder;
+
+    /// <summary>
+    /// Define a cor de preenchimento do ícone (custom ou tipo).
+    /// </summary>
+    function SetIconColor(const AColor: TAlphaColor): IDialogBuilder;
+
+    /// <summary>
+    /// Define callback chamado ao fechar o diálogo com o resultado modal.
+    /// </summary>
+    function SetOnResult(const ACallback: TDialogResultProc): IDialogBuilder;
+
+    /// <summary>
     /// Acessa o construtor de botões.
     /// </summary>
     function Buttons: IDialogButtonsBuilder;
@@ -76,28 +92,28 @@ type
   /// Interface para adição fluente de botões.
   /// </summary>
   IDialogButtonsBuilder = interface
-    ['{A6ADB133-2020-47C5-A4A8-7A11EADED3DC}']
-    
+    ['{C2D4F8A7-1E93-4B5C-8D2E-3A9F6B0C7E84}']
+
     /// <summary>
     /// Adiciona um botão com evento OnClick padrão.
     /// </summary>
-    function AddButton(const AText: string; const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
-    
+    function AddButton(const AText: string; const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
+
     /// <summary>
     /// Adiciona um botão com método anônimo (TProc).
     /// </summary>
-    function AddButton(const AText: string; const AOnSimpleClick: TProc; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnSimpleClick: TProc; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
 
     /// <summary>
     /// Adiciona um botão SEM evento (apenas fecha o diálogo).
     /// </summary>
-    function AddButton(const AText: string; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
 
     /// <summary>
     /// Adiciona um botão com evento OnTap (Toque).
     /// </summary>
-    function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor  = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
-    
+    function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
+
     /// <summary>
     /// Finaliza a adição de botões e retorna ao builder principal.
     /// </summary>
@@ -107,6 +123,3 @@ type
 implementation
 
 end.
-
-
-

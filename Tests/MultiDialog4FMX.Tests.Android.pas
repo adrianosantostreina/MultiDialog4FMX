@@ -78,6 +78,18 @@ type
 
     [Test]
     procedure TestCloseDialog_FreesAllRemainingTagObjects;
+
+    [Test]
+    procedure TestButtonClick_InvokesResultCallback;
+
+    [Test]
+    procedure TestButtonClick_NoCallback_NoException;
+
+    [Test]
+    procedure TestOnBackgroundClick_CallbackWithMrCancel;
+
+    [Test]
+    procedure TestButtonClick_CallbackBeforeClose;
   end;
 
   [TestFixture]
@@ -110,6 +122,32 @@ type
 
     [Test]
     procedure TestBuildBody_UsesFontSize;
+  end;
+
+  [TestFixture]
+  TAndroidDialogIconTests = class
+  private
+    FDialog: TAndroidDialog;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure TestBuildBody_CustomSVG_IconPresent;
+
+    [Test]
+    procedure TestBuildBody_NoSVG_CustomType_NotPresent;
+
+    [Test]
+    procedure TestBuildBody_CustomSVG_PathDataSet;
+
+    [Test]
+    procedure TestBuildBody_CustomIconColor_Applied;
+
+    [Test]
+    procedure TestBuildBody_CustomSVG_TypeColor_Fallback;
   end;
 
 implementation
@@ -453,6 +491,152 @@ begin
   end;
 end;
 
+procedure TAndroidDialogCloseTests.TestButtonClick_InvokesResultCallback;
+var
+  LOverlay       : TLayout;
+  LBtnLayout     : TFlowLayout;
+  LBtn           : TButton;
+  LObj           : TButtonHandler;
+  LCallbackResult: TModalResult;
+  LCallbackCalled: Boolean;
+begin
+  LCallbackResult := mrNone;
+  LCallbackCalled := False;
+
+  TAndroidDialogCracker(FDialog).FResultCallback :=
+    procedure(const AResult: TModalResult)
+    begin
+      LCallbackCalled := True;
+      LCallbackResult := AResult;
+    end;
+
+  LOverlay   := TLayout.Create(nil);
+  LBtnLayout := TFlowLayout.Create(LOverlay);
+  LBtnLayout.Parent := LOverlay;
+  LBtn := TButton.Create(LBtnLayout);
+  LBtn.Parent := LBtnLayout;
+
+  LObj := TButtonHandler.Create;
+  try
+    LObj.ClickHandler := OnClickHandler;
+    LObj.Overlay := LOverlay;
+    LObj.ModalResult := mrOk;
+    LBtn.TagObject := LObj;
+
+    TAndroidDialogCracker(FDialog).FBtnLayout := LBtnLayout;
+    TAndroidDialogCracker(FDialog).ButtonClick(LBtn);
+
+    Assert.IsTrue(LCallbackCalled, 'FResultCallback deve ter sido chamado');
+    Assert.AreEqual(mrOk, LCallbackResult, 'Callback deve receber mrOk');
+  finally
+    LObj.Free;
+  end;
+end;
+
+procedure TAndroidDialogCloseTests.TestButtonClick_NoCallback_NoException;
+var
+  LOverlay  : TLayout;
+  LBtnLayout: TFlowLayout;
+  LBtn      : TButton;
+  LObj      : TButtonHandler;
+begin
+  // FResultCallback is nil by default — must not raise
+  LOverlay   := TLayout.Create(nil);
+  LBtnLayout := TFlowLayout.Create(LOverlay);
+  LBtnLayout.Parent := LOverlay;
+  LBtn := TButton.Create(LBtnLayout);
+  LBtn.Parent := LBtnLayout;
+
+  LObj := TButtonHandler.Create;
+  try
+    LObj.Overlay := LOverlay;
+    LBtn.TagObject := LObj;
+
+    TAndroidDialogCracker(FDialog).FBtnLayout := LBtnLayout;
+
+    Assert.WillNotRaise(
+      procedure
+      begin
+        TAndroidDialogCracker(FDialog).ButtonClick(LBtn);
+      end);
+  finally
+    LObj.Free;
+  end;
+end;
+
+procedure TAndroidDialogCloseTests.TestOnBackgroundClick_CallbackWithMrCancel;
+var
+  LOverlay       : TLayout;
+  LBgRect        : TRectangle;
+  LCallbackResult: TModalResult;
+  LCallbackCalled: Boolean;
+begin
+  LCallbackResult := mrNone;
+  LCallbackCalled := False;
+
+  TAndroidDialogCracker(FDialog).FResultCallback :=
+    procedure(const AResult: TModalResult)
+    begin
+      LCallbackCalled := True;
+      LCallbackResult := AResult;
+    end;
+
+  // Build a minimal overlay structure: TLayout (overlay) containing TRectangle (bg)
+  LOverlay := TLayout.Create(nil);
+  LBgRect  := TRectangle.Create(LOverlay);
+  LBgRect.Parent := LOverlay;
+
+  try
+    TAndroidDialogCracker(FDialog).OnBackgroundClick(LBgRect);
+
+    Assert.IsTrue(LCallbackCalled,
+      'FResultCallback deve ter sido chamado no OnBackgroundClick');
+    Assert.AreEqual(mrCancel, LCallbackResult,
+      'OnBackgroundClick deve chamar callback com mrCancel');
+  finally
+    LOverlay.Free;
+  end;
+end;
+
+procedure TAndroidDialogCloseTests.TestButtonClick_CallbackBeforeClose;
+// Verifies callback is synchronous (called before ForceQueue defers CloseDialog)
+var
+  LOverlay       : TLayout;
+  LBtnLayout     : TFlowLayout;
+  LBtn           : TButton;
+  LObj           : TButtonHandler;
+  LCallbackCalled: Boolean;
+begin
+  LCallbackCalled := False;
+
+  TAndroidDialogCracker(FDialog).FResultCallback :=
+    procedure(const AResult: TModalResult)
+    begin
+      // Overlay must still exist at callback time (CloseDialog not yet called)
+      LCallbackCalled := True;
+    end;
+
+  LOverlay   := TLayout.Create(nil);
+  LBtnLayout := TFlowLayout.Create(LOverlay);
+  LBtnLayout.Parent := LOverlay;
+  LBtn := TButton.Create(LBtnLayout);
+  LBtn.Parent := LBtnLayout;
+
+  LObj := TButtonHandler.Create;
+  try
+    LObj.Overlay := LOverlay;
+    LBtn.TagObject := LObj;
+
+    TAndroidDialogCracker(FDialog).FBtnLayout := LBtnLayout;
+    TAndroidDialogCracker(FDialog).ButtonClick(LBtn);
+
+    Assert.IsTrue(LCallbackCalled,
+      'FResultCallback deve ser chamado sincronamente (antes do ForceQueue)');
+  finally
+    LObj.Free;
+  end;
+end;
+
 { TAndroidDialogLayoutTests }
 
 procedure TAndroidDialogLayoutTests.Setup;
@@ -703,9 +887,257 @@ begin
   end;
 end;
 
+{ TAndroidDialogIconTests }
+
+procedure TAndroidDialogIconTests.Setup;
+begin
+  FDialog := TAndroidDialog.Create;
+end;
+
+procedure TAndroidDialogIconTests.TearDown;
+begin
+  FDialog := nil;
+end;
+
+procedure TAndroidDialogIconTests.TestBuildBody_CustomSVG_IconPresent;
+var
+  LForm       : TCommonCustomForm;
+  LOverlay    : TLayout;
+  LDialogRect : TRectangle;
+  LBgRect     : TRectangle;
+  LIconPresent: Boolean;
+  LBodyLayout : TLayout;
+begin
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+
+  // mdtCustom + FCustomSVG set -> AIconPresent must be True
+  TAndroidDialogCracker(FDialog).FCustomSVG := 'M1 2 L3 4';
+
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    LOverlay    := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
+    try
+      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay);
+      TAndroidDialogCracker(FDialog).BuildBody(LDialogRect, LIconPresent, LBodyLayout);
+
+      Assert.IsTrue(LIconPresent,
+        'AIconPresent deve ser True quando FCustomSVG <> '''' com mdtCustom');
+    finally
+      LOverlay.Parent := nil;
+      LOverlay.Free;
+    end;
+  finally
+    LForm.Free;
+  end;
+end;
+
+procedure TAndroidDialogIconTests.TestBuildBody_NoSVG_CustomType_NotPresent;
+var
+  LForm       : TCommonCustomForm;
+  LOverlay    : TLayout;
+  LDialogRect : TRectangle;
+  LBgRect     : TRectangle;
+  LIconPresent: Boolean;
+  LBodyLayout : TLayout;
+begin
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+
+  // mdtCustom + no SVG -> AIconPresent must be False
+  // FCustomSVG defaults to '' (Delphi zero-initialises strings)
+
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    LOverlay    := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
+    try
+      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay);
+      TAndroidDialogCracker(FDialog).BuildBody(LDialogRect, LIconPresent, LBodyLayout);
+
+      Assert.IsFalse(LIconPresent,
+        'AIconPresent deve ser False quando mdtCustom sem SVG customizado');
+    finally
+      LOverlay.Parent := nil;
+      LOverlay.Free;
+    end;
+  finally
+    LForm.Free;
+  end;
+end;
+
+procedure TAndroidDialogIconTests.TestBuildBody_CustomSVG_PathDataSet;
+var
+  LForm         : TCommonCustomForm;
+  LOverlay      : TLayout;
+  LDialogRect   : TRectangle;
+  LBgRect       : TRectangle;
+  LIconPresent  : Boolean;
+  LBodyLayout   : TLayout;
+  LPath         : TPath;
+  I             : Integer;
+  LIconContainer: TLayout;
+begin
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+
+  TAndroidDialogCracker(FDialog).FCustomSVG := 'M1 2 L3 4';
+
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    LOverlay    := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
+    try
+      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay);
+      TAndroidDialogCracker(FDialog).BuildBody(LDialogRect, LIconPresent, LBodyLayout);
+
+      // Find the TPath inside LBodyLayout children
+      LPath := nil;
+      for I := 0 to LBodyLayout.ChildrenCount - 1 do
+        if LBodyLayout.Children[I] is TLayout then
+        begin
+          LIconContainer := TLayout(LBodyLayout.Children[I]);
+          if (LIconContainer.ChildrenCount > 0) and
+             (LIconContainer.Children[0] is TPath) then
+          begin
+            LPath := TPath(LIconContainer.Children[0]);
+            Break;
+          end;
+        end;
+
+      Assert.IsNotNull(LPath, 'TPath deve existir quando FCustomSVG <> ''''');
+      // FMX normaliza o SVG ao atribuir (ex: 'M1 2 L3 4' -> 'M1,2 L3,4 ')
+      // Verificamos apenas que o Data nao esta vazio (custom SVG foi aplicado)
+      Assert.IsTrue(LPath.Data.Data <> '',
+        'TPath.Data.Data nao deve ser vazio quando FCustomSVG foi definido');
+    finally
+      LOverlay.Parent := nil;
+      LOverlay.Free;
+    end;
+  finally
+    LForm.Free;
+  end;
+end;
+
+procedure TAndroidDialogIconTests.TestBuildBody_CustomIconColor_Applied;
+var
+  LForm         : TCommonCustomForm;
+  LOverlay      : TLayout;
+  LDialogRect   : TRectangle;
+  LBgRect       : TRectangle;
+  LIconPresent  : Boolean;
+  LBodyLayout   : TLayout;
+  LPath         : TPath;
+  I             : Integer;
+  LIconContainer: TLayout;
+begin
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+
+  TAndroidDialogCracker(FDialog).FMsgType := TMultiDialogType.mdtWarning;
+  TAndroidDialogCracker(FDialog).FCustomIconColor := TAlphaColorRec.Purple;
+
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    LOverlay    := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
+    try
+      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay);
+      TAndroidDialogCracker(FDialog).BuildBody(LDialogRect, LIconPresent, LBodyLayout);
+
+      LPath := nil;
+      for I := 0 to LBodyLayout.ChildrenCount - 1 do
+        if LBodyLayout.Children[I] is TLayout then
+        begin
+          LIconContainer := TLayout(LBodyLayout.Children[I]);
+          if (LIconContainer.ChildrenCount > 0) and
+             (LIconContainer.Children[0] is TPath) then
+          begin
+            LPath := TPath(LIconContainer.Children[0]);
+            Break;
+          end;
+        end;
+
+      Assert.IsNotNull(LPath, 'TPath deve existir para mdtWarning');
+      Assert.AreEqual(TAlphaColorRec.Purple, LPath.Fill.Color,
+        'Fill.Color deve ser Purple (FCustomIconColor tem prioridade)');
+    finally
+      LOverlay.Parent := nil;
+      LOverlay.Free;
+    end;
+  finally
+    LForm.Free;
+  end;
+end;
+
+procedure TAndroidDialogIconTests.TestBuildBody_CustomSVG_TypeColor_Fallback;
+var
+  LForm         : TCommonCustomForm;
+  LOverlay      : TLayout;
+  LDialogRect   : TRectangle;
+  LBgRect       : TRectangle;
+  LIconPresent  : Boolean;
+  LBodyLayout   : TLayout;
+  LPath         : TPath;
+  I             : Integer;
+  LIconContainer: TLayout;
+begin
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+
+  // mdtWarning + custom SVG + no custom color -> type color (Gold) must be used
+  TAndroidDialogCracker(FDialog).FMsgType := TMultiDialogType.mdtWarning;
+  TAndroidDialogCracker(FDialog).FCustomSVG := 'M1 2 L3 4';
+  // FCustomIconColor = 0 (default)
+
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    LOverlay    := TAndroidDialogCracker(FDialog).BuildOverlay(LForm, LBgRect);
+    try
+      LDialogRect := TAndroidDialogCracker(FDialog).BuildDialogRect(LOverlay);
+      TAndroidDialogCracker(FDialog).BuildBody(LDialogRect, LIconPresent, LBodyLayout);
+
+      LPath := nil;
+      for I := 0 to LBodyLayout.ChildrenCount - 1 do
+        if LBodyLayout.Children[I] is TLayout then
+        begin
+          LIconContainer := TLayout(LBodyLayout.Children[I]);
+          if (LIconContainer.ChildrenCount > 0) and
+             (LIconContainer.Children[0] is TPath) then
+          begin
+            LPath := TPath(LIconContainer.Children[0]);
+            Break;
+          end;
+        end;
+
+      Assert.IsNotNull(LPath, 'TPath deve existir');
+      Assert.AreEqual(TAlphaColorRec.Gold, LPath.Fill.Color,
+        'Cor deve ser Gold (cor do tipo mdtWarning) quando FCustomIconColor = 0');
+    finally
+      LOverlay.Parent := nil;
+      LOverlay.Free;
+    end;
+  finally
+    LForm.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TAndroidDialogTests);
   TDUnitX.RegisterTestFixture(TAndroidDialogCloseTests);
   TDUnitX.RegisterTestFixture(TAndroidDialogLayoutTests);
+  TDUnitX.RegisterTestFixture(TAndroidDialogIconTests);
 
 end.

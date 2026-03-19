@@ -1,4 +1,4 @@
-﻿unit MultiDialog4FMX.Base;
+unit MultiDialog4FMX.Base;
 
 interface
 
@@ -30,6 +30,7 @@ type
     FColor: TAlphaColor;
     FStyleLookup: string;
     FOverlay: TLayout;
+    FModalResult: TModalResult;
   public
     constructor Create;
     destructor Destroy; override;
@@ -42,6 +43,7 @@ type
     property Color: TAlphaColor read FColor write FColor;
     property StyleLookup: string read FStyleLookup write FStyleLookup;
     property Overlay: TLayout read FOverlay write FOverlay;
+    property ModalResult: TModalResult read FModalResult write FModalResult;
   end;
   TButtonHandlerList = TObjectList<TButtonHandler>;
 
@@ -55,6 +57,9 @@ type
     FFontSize: Single;
     FBorderRadius: Single;
     FAnimation: TDialogAnimation;
+    FCustomSVG: string;
+    FCustomIconColor: TAlphaColor;
+    FResultCallback: TDialogResultProc;
     // Cada plataforma implementa sua exibição
     procedure InternalShow(const AForm: TCommonCustomForm); virtual; abstract;
     function ResolveParentForm(const AForm: TCommonCustomForm): TCommonCustomForm;
@@ -70,6 +75,9 @@ type
     function SetFontSize(const ASize: Single): IDialogBuilder;
     function SetBorderRadius(const ARadius: Single): IDialogBuilder;
     function SetAnimation(const AAnimation: TDialogAnimation): IDialogBuilder;
+    function SetIcon(const ASVG: string): IDialogBuilder;
+    function SetIconColor(const AColor: TAlphaColor): IDialogBuilder;
+    function SetOnResult(const ACallback: TDialogResultProc): IDialogBuilder;
     function Buttons: IDialogButtonsBuilder;
     function Show: IDialogBuilder; overload;
     function Show(const AForm: TCommonCustomForm): IDialogBuilder; overload;
@@ -82,10 +90,10 @@ type
   public
     constructor Create(const AParent: TDialogBase);
 
-    function AddButton(const AText: string; const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
-    function AddButton(const AText: string; const AOnSimpleClick: TProc; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
-    function AddButton(const AText: string; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
-    function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnSimpleClick: TProc; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
     function &End: IDialogBuilder;
   end;
 
@@ -97,6 +105,7 @@ constructor TButtonHandler.Create;
 begin
   inherited;
   Inc(TButtonHandler.FInstanceCount);
+  FModalResult := mrOk;
 end;
 
 destructor TButtonHandler.Destroy;
@@ -174,6 +183,24 @@ begin
   Result := Self;
 end;
 
+function TDialogBase.SetIcon(const ASVG: string): IDialogBuilder;
+begin
+  FCustomSVG := ASVG;
+  Result := Self;
+end;
+
+function TDialogBase.SetIconColor(const AColor: TAlphaColor): IDialogBuilder;
+begin
+  FCustomIconColor := AColor;
+  Result := Self;
+end;
+
+function TDialogBase.SetOnResult(const ACallback: TDialogResultProc): IDialogBuilder;
+begin
+  FResultCallback := ACallback;
+  Result := Self;
+end;
+
 function TDialogBase.Buttons: IDialogButtonsBuilder;
 begin
   Result := TDialogButtonsBuilder.Create(Self);
@@ -200,7 +227,8 @@ begin
 end;
 
 function TDialogButtonsBuilder.AddButton(const AText: string;
-  const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder;
+  const AOnClick: TNotifyEvent; const AColor: TAlphaColor = TAlphaColorRec.Null;
+  const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder;
 var
   Rec: TButtonHandler;
 begin
@@ -212,9 +240,9 @@ begin
   Rec.ClickHandler := AOnClick;
   Rec.TapHandler := nil;
   Rec.AnonymousHandler := nil;
-
   Rec.Color := AColor;
   Rec.StyleLookup := AStyleLookup;
+  Rec.ModalResult := AModalResult;
 
   FParent.FButtonHandlers.Add(Rec);
 
@@ -222,7 +250,8 @@ begin
 end;
 
 function TDialogButtonsBuilder.AddButton(const AText: string;
-  const AOnSimpleClick: TProc; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder;
+  const AOnSimpleClick: TProc; const AColor: TAlphaColor = TAlphaColorRec.Null;
+  const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder;
 var
   Rec: TButtonHandler;
 begin
@@ -234,23 +263,25 @@ begin
   Rec.ClickHandler := nil;
   Rec.TapHandler := nil;
   Rec.AnonymousHandler := AOnSimpleClick;
-
   Rec.Color := AColor;
   Rec.StyleLookup := AStyleLookup;
+  Rec.ModalResult := AModalResult;
 
   FParent.FButtonHandlers.Add(Rec);
 
   Result := Self;
 end;
 
-function TDialogButtonsBuilder.AddButton(const AText: string; const AColor: TAlphaColor; const AStyleLookup: string): IDialogButtonsBuilder;
+function TDialogButtonsBuilder.AddButton(const AText: string;
+  const AColor: TAlphaColor = TAlphaColorRec.Null;
+  const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder;
 begin
-  // Redireciona para o overload principal passando nil no evento
-  Result := AddButton(AText, TNotifyEvent(nil), AColor, AStyleLookup);
+  Result := AddButton(AText, TNotifyEvent(nil), AColor, AStyleLookup, AModalResult);
 end;
 
 function TDialogButtonsBuilder.AddButton(const AText: string;
-  const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''): IDialogButtonsBuilder;
+  const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null;
+  const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder;
 var
   Rec: TButtonHandler;
 begin
@@ -262,15 +293,14 @@ begin
   Rec.ClickHandler := nil;
   Rec.TapHandler := AOnTap;
   Rec.AnonymousHandler := nil;
-  
   Rec.Color := AColor;
   Rec.StyleLookup := AStyleLookup;
+  Rec.ModalResult := AModalResult;
 
   FParent.FButtonHandlers.Add(Rec);
 
   Result := Self;
 end;
-
 
 function TDialogButtonsBuilder.&End: IDialogBuilder;
 begin

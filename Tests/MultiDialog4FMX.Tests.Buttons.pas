@@ -60,6 +60,21 @@ type
     
     [Test]
     procedure TestButtonHandler_StoresCorrectData;
+
+    [Test]
+    procedure TestAddButton_ModalResult_DefaultIsOk;
+
+    [Test]
+    procedure TestAddButton_ModalResult_ExplicitCancel;
+
+    [Test]
+    procedure TestAddButton_NoHandler_ModalResult_Forwarded;
+
+    [Test]
+    procedure TestAddButton_AnonymousMethod_ModalResult;
+
+    [Test]
+    procedure TestAddButton_TapEvent_ModalResult;
   end;
 
 implementation
@@ -192,6 +207,45 @@ begin
   Assert.IsTrue(Assigned(Handler.ClickHandler), 'ClickHandler should be assigned');
   Assert.AreEqual(TAlphaColorRec.Blue, Handler.Color);
   Assert.AreEqual('mystyle', Handler.StyleLookup);
+end;
+
+procedure TButtonTests.TestAddButton_ModalResult_DefaultIsOk;
+begin
+  FDialog.Buttons.AddButton('Test', OnTestClick);
+  Assert.AreEqual(mrOk, FDialog.ButtonHandlers[0].ModalResult,
+    'Default ModalResult deve ser mrOk');
+end;
+
+procedure TButtonTests.TestAddButton_ModalResult_ExplicitCancel;
+begin
+  FDialog.Buttons.AddButton('Test', OnTestClick,
+    TAlphaColorRec.Null, '', mrCancel);
+  Assert.AreEqual(mrCancel, FDialog.ButtonHandlers[0].ModalResult,
+    'ModalResult deve ser mrCancel quando explicitamente definido');
+end;
+
+procedure TButtonTests.TestAddButton_NoHandler_ModalResult_Forwarded;
+begin
+  FDialog.Buttons.AddButton('Test', TAlphaColorRec.Null, '', mrCancel);
+  Assert.AreEqual(mrCancel, FDialog.ButtonHandlers[0].ModalResult,
+    'Overload sem handler deve repassar AModalResult');
+end;
+
+procedure TButtonTests.TestAddButton_AnonymousMethod_ModalResult;
+begin
+  FDialog.Buttons.AddButton('Test',
+    procedure begin end,
+    TAlphaColorRec.Null, '', mrCancel);
+  Assert.AreEqual(mrCancel, FDialog.ButtonHandlers[0].ModalResult,
+    'Overload TProc deve repassar AModalResult');
+end;
+
+procedure TButtonTests.TestAddButton_TapEvent_ModalResult;
+begin
+  FDialog.Buttons.AddButton('Test', OnTestTap,
+    TAlphaColorRec.Null, '', mrCancel);
+  Assert.AreEqual(mrCancel, FDialog.ButtonHandlers[0].ModalResult,
+    'Overload TTapEvent deve repassar AModalResult');
 end;
 
 initialization
