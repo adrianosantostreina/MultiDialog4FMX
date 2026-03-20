@@ -38,6 +38,7 @@ type
     Button7: TButton;
     Button8: TButton;
     Button9: TButton;
+    procedure Button10Click(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button1Tap(Sender: TObject; const Point: TPointF);
     procedure Button2Click(Sender: TObject);
@@ -72,6 +73,27 @@ implementation
 
 {$R *.fmx}
 
+procedure TForm3.Button10Click(Sender: TObject);
+begin
+  TMultiDialog4FMX.Dialog
+    .SetFontSize(13)
+    .SetBorderRadius(8)
+    .SetType(TMultiDialogType.mdtQuestion) // Define o ícone
+    .SetTitle('Saída')
+    .SetMessage('Confirma saída do sistema?')
+    .SetCancelable(True)
+    .Buttons
+      .AddButton('Sim',
+        procedure()
+        begin
+          Label1.Text := 'Clicou em SIM.';
+        end
+      ,TAlphaColorRec.Null, 'BtnComumGreen') // ✅ Nova sintaxe limpa sem evento
+      .AddButton('Não', TAlphaColorRec.Null, 'BtnComumRed') // ✅ Nova sintaxe limpa sem evento
+    .&End
+    .Show;
+end;
+
 procedure TForm3.DoClickSim(Sender: TObject);
 begin
   Label1.Text := 'Clicou em Sim';
@@ -86,7 +108,6 @@ procedure TForm3.DoClickTalvez(Sender: TObject);
 begin
   Label1.Text := 'Clicou em Talvez';
 end;
-
 
 procedure TForm3.Button1Click(Sender: TObject);
 begin
@@ -168,6 +189,7 @@ begin
     .SetCancelable(True)
     .Buttons
       .AddButton('OK', TAlphaColorRec.Null, 'BtnComumGreen') // ✅ Nova sintaxe limpa sem evento
+      .AddButton('Cancelar', TAlphaColorRec.Null, 'BtnComumGray2') // ✅ Nova sintaxe limpa sem evento
     .&End
     .Show;
 end;
@@ -244,6 +266,8 @@ end;
 procedure TForm3.Button8Click(Sender: TObject);
 begin
   TMultiDialog4FMX.Dialog
+    //.SetFontSize(14)
+    //.SetBorderRadius(20)
     .SetType(TMultiDialogType.mdtQuestion) // Define o ícone
     .SetTitle('Saída')
     .SetMessage('Confirma saída do sistema?')
@@ -329,15 +353,15 @@ begin
     .SetMessage('Qual sua nota para o atendimento?')
     // Em Portrait < 600px, o botão "Pular" deve ficar full width abaixo
     .Buttons
-      .AddButton('Ruim', 
+      .AddButton('Ruim',
         procedure
         begin
           Label1.Text := 'Avaliação: Ruim (via Anônimo)';
         end,
-        TAlphaColorRec.Red, 'trasparentstyle')    // ✅ Teste Anônimo + Style
+        TAlphaColorRec.Red, '')    // ✅ Teste Anônimo + Style
       .AddButton('Bom', TAlphaColorRec.Orange)  // ✅ Nova sintaxe limpa
       .AddButton('Ótimo', TAlphaColorRec.Green) // ✅ Nova sintaxe limpa
-      .AddButton('Pular Avaliação', TAlphaColorRec.Lightgray) // ✅ Nova sintaxe limpa
+      .AddButton('Pular Avaliação', TAlphaColorRec.Brown) // ✅ Nova sintaxe limpa
     .&End
     .Show;
 end;
@@ -354,6 +378,22 @@ begin
     .&End
     .Show;
 end;
+
+
+{ =========================================================================
+  Stub TSkSvg — evita EClassNotFound em ambientes sem Skia4Delphi.
+  O StyleBook deste sample foi criado em um IDE com Skia instalado e contém
+  um TSkSvg decorativo em um dos estilos de botão.  A biblioteca em si não
+  usa TSkSvg — apenas TPath (FMX nativo).
+  ========================================================================= }
+type
+  TSkSvgPlaceholder = class(TFmxObject);
+
+initialization
+  // Registra placeholder apenas se TSkSvg não estiver disponível (sem Skia4Delphi).
+  // Quando Skia estiver instalado, GetClass('TSkSvg') retorna a classe real.
+  if not Assigned(GetClass('TSkSvg')) then
+    RegisterClassAlias(TSkSvgPlaceholder, 'TSkSvg');
 
 end.
 

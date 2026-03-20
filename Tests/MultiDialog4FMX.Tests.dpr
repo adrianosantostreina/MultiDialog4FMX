@@ -16,13 +16,16 @@ uses
   DUnitX.TestFramework,
   MultiDialog4FMX.Interfaces in '..\src\MultiDialog4FMX.Interfaces.pas',
   MultiDialog4FMX.Base in '..\src\MultiDialog4FMX.Base.pas',
+  MultiDialog4FMX.FMX in '..\src\MultiDialog4FMX.FMX.pas',
   MultiDialog4FMX.Factory in '..\src\MultiDialog4FMX.Factory.pas',
   MultiDialog4FMX.Android in '..\src\MultiDialog4FMX.Android.pas',
+  MultiDialog4FMX.Desktop in '..\src\MultiDialog4FMX.Desktop.pas',
   MultiDialog4FMX.Tests.Mocks in 'MultiDialog4FMX.Tests.Mocks.pas',
   MultiDialog4FMX.Tests.Builder in 'MultiDialog4FMX.Tests.Builder.pas',
   MultiDialog4FMX.Tests.Buttons in 'MultiDialog4FMX.Tests.Buttons.pas',
   MultiDialog4FMX.Tests.Factory in 'MultiDialog4FMX.Tests.Factory.pas',
   MultiDialog4FMX.Tests.Android in 'MultiDialog4FMX.Tests.Android.pas',
+  MultiDialog4FMX.Tests.Desktop in 'MultiDialog4FMX.Tests.Desktop.pas',
   MultiDialog4FMX.Tests.MemoryLeaks in 'MultiDialog4FMX.Tests.MemoryLeaks.pas';
 
 {$IFNDEF TESTINSIGHT}

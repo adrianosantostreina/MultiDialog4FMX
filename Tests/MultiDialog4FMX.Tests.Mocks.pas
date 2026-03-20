@@ -9,6 +9,7 @@ uses
   FMX.Types,
   System.Classes,
   System.SysUtils,
+  System.UITypes,
   System.Generics.Collections;
 
 type
@@ -54,6 +55,9 @@ type
     property MsgType: TMultiDialogType read FMsgType;
     property FontSize: Single read FFontSize;
     property BorderRadius: Single read FBorderRadius;
+    property CustomSVG: string read FCustomSVG;
+    property CustomIconColor: TAlphaColor read FCustomIconColor;
+    property ResultCallback: TDialogResultProc read FResultCallback;
   end;
 
 implementation

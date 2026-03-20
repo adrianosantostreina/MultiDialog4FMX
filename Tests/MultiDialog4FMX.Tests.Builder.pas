@@ -6,7 +6,9 @@ uses
   DUnitX.TestFramework,
   MultiDialog4FMX.Tests.Mocks,
   MultiDialog4FMX.Interfaces,
-  System.SysUtils;
+  System.SysUtils,
+  System.UITypes,
+  FMX.Types;
 
 type
   [TestFixture]
@@ -16,34 +18,34 @@ type
   public
     [Setup]
     procedure Setup;
-    
+
     [TearDown]
     procedure TearDown;
-    
+
     [Test]
     procedure TestSetTitle_StoresValue;
-    
+
     [Test]
     procedure TestSetMessage_StoresValue;
-    
+
     [Test]
     procedure TestSetCancelable_True;
-    
+
     [Test]
     procedure TestSetCancelable_False;
-    
+
     [Test]
     procedure TestFluentChaining_Multiple;
-    
+
     [Test]
     procedure TestButtons_ReturnsButtonsBuilder;
-    
+
     [Test]
     procedure TestButtonsEnd_ReturnsDialogBuilder;
-    
+
     [Test]
     procedure TestShow_CallsInternalShow;
-    
+
     [Test]
     procedure TestSetType_StoresValue;
 
@@ -55,6 +57,33 @@ type
 
     [Test]
     procedure TestSetBorderRadius_StoresValue;
+
+    [Test]
+    procedure TestSetIcon_StoresValue;
+
+    [Test]
+    procedure TestSetIconColor_StoresValue;
+
+    [Test]
+    procedure TestSetIcon_ReturnsSelf;
+
+    [Test]
+    procedure TestSetIcon_DefaultIsEmpty;
+
+    [Test]
+    procedure TestSetIconColor_DefaultIsNull;
+
+    [Test]
+    procedure TestSetIcon_WithSetType_BothStored;
+
+    [Test]
+    procedure TestSetOnResult_StoresCallback;
+
+    [Test]
+    procedure TestSetOnResult_DefaultIsNil;
+
+    [Test]
+    procedure TestSetOnResult_NilArg_NoException;
   end;
 
 implementation
@@ -103,7 +132,7 @@ begin
     .SetTitle('Title')
     .SetMessage('Message')
     .SetCancelable(True);
-    
+
   Assert.IsNotNull(Result);
   Assert.AreEqual('Title', FDialog.Title);
   Assert.AreEqual('Message', FDialog.Message);
@@ -157,6 +186,76 @@ procedure TDialogBuilderTests.TestSetBorderRadius_StoresValue;
 begin
   FDialog.SetBorderRadius(8);
   Assert.AreEqual(Single(8), FDialog.BorderRadius);
+end;
+
+procedure TDialogBuilderTests.TestSetIcon_StoresValue;
+begin
+  FDialog.SetIcon('M1 2 L3 4');
+  Assert.AreEqual('M1 2 L3 4', FDialog.CustomSVG,
+    'FCustomSVG deve armazenar o valor passado a SetIcon');
+end;
+
+procedure TDialogBuilderTests.TestSetIconColor_StoresValue;
+begin
+  FDialog.SetIconColor(TAlphaColorRec.Purple);
+  Assert.AreEqual(TAlphaColorRec.Purple, FDialog.CustomIconColor,
+    'FCustomIconColor deve armazenar a cor passada a SetIconColor');
+end;
+
+procedure TDialogBuilderTests.TestSetIcon_ReturnsSelf;
+var
+  LResult: IDialogBuilder;
+begin
+  LResult := FDialog.SetIcon('M1 2 L3 4');
+  Assert.AreSame(FDialog as IDialogBuilder, LResult,
+    'SetIcon deve retornar Self (cadeia fluente nao deve quebrar)');
+end;
+
+procedure TDialogBuilderTests.TestSetIcon_DefaultIsEmpty;
+begin
+  Assert.AreEqual('', FDialog.CustomSVG,
+    'FCustomSVG deve ser vazio apos Create');
+end;
+
+procedure TDialogBuilderTests.TestSetIconColor_DefaultIsNull;
+begin
+  Assert.AreEqual(TAlphaColor(0), FDialog.CustomIconColor,
+    'FCustomIconColor deve ser 0 (TAlphaColorRec.Null) apos Create');
+end;
+
+procedure TDialogBuilderTests.TestSetIcon_WithSetType_BothStored;
+begin
+  FDialog.SetType(TMultiDialogType.mdtWarning);
+  FDialog.SetIcon('M1 2 L3 4');
+  Assert.AreEqual(TMultiDialogType.mdtWarning, FDialog.MsgType,
+    'FMsgType deve ser mdtWarning');
+  Assert.AreEqual('M1 2 L3 4', FDialog.CustomSVG,
+    'FCustomSVG deve coexistir com FMsgType');
+end;
+
+procedure TDialogBuilderTests.TestSetOnResult_StoresCallback;
+var
+  LDummy: TDialogResultProc;
+begin
+  LDummy := procedure(const AResult: TModalResult) begin end;
+  FDialog.SetOnResult(LDummy);
+  Assert.IsTrue(Assigned(FDialog.ResultCallback),
+    'FResultCallback deve estar atribuido apos SetOnResult');
+end;
+
+procedure TDialogBuilderTests.TestSetOnResult_DefaultIsNil;
+begin
+  Assert.IsFalse(Assigned(FDialog.ResultCallback),
+    'FResultCallback deve ser nil apos Create');
+end;
+
+procedure TDialogBuilderTests.TestSetOnResult_NilArg_NoException;
+begin
+  Assert.WillNotRaise(
+    procedure
+    begin
+      FDialog.SetOnResult(nil);
+    end);
 end;
 
 initialization
