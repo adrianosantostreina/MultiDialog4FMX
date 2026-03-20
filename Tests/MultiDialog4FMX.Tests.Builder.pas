@@ -90,6 +90,12 @@ type
 
     [Test]
     procedure TestSetAnimation_DefaultIsNone;
+
+    [Test]
+    procedure TestSetTheme_StoresValue;
+
+    [Test]
+    procedure TestSetTheme_DefaultIsAuto;
   end;
 
 implementation
@@ -275,6 +281,19 @@ procedure TDialogBuilderTests.TestSetAnimation_DefaultIsNone;
 begin
   Assert.AreEqual(TDialogAnimation.danNone, FDialog.Animation,
     'Animação padrão deve ser danNone');
+end;
+
+procedure TDialogBuilderTests.TestSetTheme_StoresValue;
+begin
+  FDialog.SetTheme(TDialogTheme.dthDark);
+  Assert.AreEqual(TDialogTheme.dthDark, FDialog.Theme,
+    'SetTheme(dthDark) deve armazenar dthDark em FTheme');
+end;
+
+procedure TDialogBuilderTests.TestSetTheme_DefaultIsAuto;
+begin
+  Assert.AreEqual(TDialogTheme.dthAuto, FDialog.Theme,
+    'Tema padrão deve ser dthAuto após Create');
 end;
 
 initialization

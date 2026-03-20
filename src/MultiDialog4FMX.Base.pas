@@ -59,6 +59,7 @@ type
     FFontSize: Single;
     FBorderRadius: Single;
     FAnimation: TDialogAnimation;
+    FTheme: TDialogTheme;
     FCustomSVG: string;
     FCustomIconColor: TAlphaColor;
     FResultCallback: TDialogResultProc;
@@ -77,6 +78,7 @@ type
     function SetFontSize(const ASize: Single): IDialogBuilder;
     function SetBorderRadius(const ARadius: Single): IDialogBuilder;
     function SetAnimation(const AAnimation: TDialogAnimation): IDialogBuilder;
+    function SetTheme(const ATheme: TDialogTheme): IDialogBuilder;
     function SetIcon(const ASVG: string): IDialogBuilder;
     function SetIconColor(const AColor: TAlphaColor): IDialogBuilder;
     function SetOnResult(const ACallback: TDialogResultProc): IDialogBuilder;
@@ -183,6 +185,12 @@ end;
 function TDialogBase.SetAnimation(const AAnimation: TDialogAnimation): IDialogBuilder;
 begin
   FAnimation := AAnimation;
+  Result := Self;
+end;
+
+function TDialogBase.SetTheme(const ATheme: TDialogTheme): IDialogBuilder;
+begin
+  FTheme := ATheme;
   Result := Self;
 end;
 

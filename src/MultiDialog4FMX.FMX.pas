@@ -32,6 +32,7 @@ type
     FTimeoutOrigText  : string;
     FTimeoutRemaining : Integer;
     FTimeoutCancelled : Boolean;
+    function  ResolveIsDark: Boolean;
     procedure ApplyEntranceAnimation(const AOverlay: TLayout;
                                      const ADialogRect: TRectangle);
     procedure ApplyExitAnimation(const AOverlay: TLayout;
@@ -88,6 +89,23 @@ const
   C_BaseTitleFontSize   = 16;
 
 { TFMXDialog }
+
+function TFMXDialog.ResolveIsDark: Boolean;
+var
+  LSvc: IFMXSystemAppearanceService;
+begin
+  case FTheme of
+    dthDark:  Result := True;
+    dthLight: Result := False;
+  else
+    // dthAuto: query the platform; fall back to Light if service unavailable
+    if TPlatformServices.Current.SupportsPlatformService(
+         IFMXSystemAppearanceService, LSvc) then
+      Result := LSvc.ThemeKind = TSystemThemeKind.Dark
+    else
+      Result := False;
+  end;
+end;
 
 function TFMXDialog.GetPlatformScale: Single;
 var
@@ -162,7 +180,7 @@ begin
   LBgRect.Parent := LOverlay;
   LBgRect.Align := TAlignLayout.Contents;
   LBgRect.Fill.Color := TAlphaColorRec.Black;
-  LBgRect.Opacity := 0.4;
+  LBgRect.Opacity := IfThen(ResolveIsDark, 0.65, 0.40);
   LBgRect.Stroke.Kind := TBrushKind.None;
 
   ABgRect := LBgRect;
@@ -179,8 +197,18 @@ begin
   LDialogRect.Width := C_BaseDialogWidth;
   LDialogRect.XRadius := FBorderRadius;
   LDialogRect.YRadius := FBorderRadius;
-  LDialogRect.Fill.Color := TAlphaColorRec.White;
-  LDialogRect.Stroke.Kind := TBrushKind.None;
+  if ResolveIsDark then
+  begin
+    LDialogRect.Fill.Color   := $FF2D2D2D;
+    LDialogRect.Stroke.Kind  := TBrushKind.Solid;
+    LDialogRect.Stroke.Color := $FF444444;
+  end
+  else
+  begin
+    LDialogRect.Fill.Color   := TAlphaColorRec.White;
+    LDialogRect.Stroke.Kind  := TBrushKind.Solid;
+    LDialogRect.Stroke.Color := $FFE0E0E0;
+  end;
   LDialogRect.Padding.Rect := RectF(4, 4, 4, 4);
   FDialogRect := LDialogRect;
   Result := LDialogRect;
@@ -201,7 +229,13 @@ begin
   LLblTitle.Margins.Rect := RectF(16, 12, 16, 4);
   LLblTitle.Height := C_BaseTitleHeight;
   LLblTitle.TextSettings.Font.Size := C_BaseTitleFontSize;
-  LLblTitle.StyledSettings := [TStyledSetting.Style, TStyledSetting.FontColor];
+  if ResolveIsDark then
+  begin
+    LLblTitle.StyledSettings := [TStyledSetting.Style];
+    LLblTitle.TextSettings.FontColor := TAlphaColorRec.White;
+  end
+  else
+    LLblTitle.StyledSettings := [TStyledSetting.Style, TStyledSetting.FontColor];
   LLblTitle.VertTextAlign := TTextAlign.Center;
 end;
 
@@ -280,7 +314,13 @@ begin
     LblMsg.Text := FMessage;
     LblMsg.VertTextAlign := TTextAlign.Leading;
     LblMsg.TextSettings.Font.Size := FFontSize;
-    LblMsg.StyledSettings := [TStyledSetting.Style, TStyledSetting.FontColor];
+    if ResolveIsDark then
+    begin
+      LblMsg.StyledSettings := [TStyledSetting.Style];
+      LblMsg.TextSettings.FontColor := TAlphaColorRec.White;
+    end
+    else
+      LblMsg.StyledSettings := [TStyledSetting.Style, TStyledSetting.FontColor];
   end;
 
   if AIconPresent then
