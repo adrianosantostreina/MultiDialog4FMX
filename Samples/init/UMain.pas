@@ -38,7 +38,10 @@ type
     Button7: TButton;
     Button8: TButton;
     Button9: TButton;
+    Button10: TButton;
+    Button11: TButton;
     procedure Button10Click(Sender: TObject);
+    procedure Button11Click(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button1Tap(Sender: TObject; const Point: TPointF);
     procedure Button2Click(Sender: TObject);
@@ -76,12 +79,13 @@ implementation
 procedure TForm3.Button10Click(Sender: TObject);
 begin
   TMultiDialog4FMX.Dialog
-    .SetFontSize(13)
-    .SetBorderRadius(8)
+    //.SetFontSize(14)
+    //.SetBorderRadius(20)
     .SetType(TMultiDialogType.mdtQuestion) // Define o ícone
     .SetTitle('Saída')
     .SetMessage('Confirma saída do sistema?')
     .SetCancelable(True)
+    .SetAnimation(danSlide)
     .Buttons
       .AddButton('Sim',
         procedure()
@@ -90,6 +94,22 @@ begin
         end
       ,TAlphaColorRec.Null, 'BtnComumGreen') // ✅ Nova sintaxe limpa sem evento
       .AddButton('Não', TAlphaColorRec.Null, 'BtnComumRed') // ✅ Nova sintaxe limpa sem evento
+    .&End
+    .Show;
+end;
+
+procedure TForm3.Button11Click(Sender: TObject);
+begin
+  TMultiDialog4FMX.Dialog
+    //.SetFontSize(14)
+    //.SetBorderRadius(20)
+    .SetType(TMultiDialogType.mdtQuestion) // Define o ícone
+    .SetTitle('Saída')
+    .SetMessage('Confirma saída do sistema?')
+    .SetCancelable(True)
+    .Buttons
+      .AddButton('Ok', 5)
+      .AddButton('Cancelar')
     .&End
     .Show;
 end;

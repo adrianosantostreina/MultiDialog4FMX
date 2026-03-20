@@ -1,4 +1,4 @@
-unit MultiDialog4FMX.FMX;
+﻿unit MultiDialog4FMX.FMX;
 
 interface
 
@@ -14,36 +14,55 @@ uses
   FMX.Graphics,
   FMX.TextLayout,
   FMX.Platform,
+  FMX.Ani,
 
   System.Types,
   System.UITypes,
   System.SysUtils,
   System.Classes,
-  System.Math;
+  System.Math,
+  System.Threading;
 
 type
   TFMXDialog = class(TDialogBase, IDialogBuilder)
   private
-    FKeepAlive: IDialogBuilder;
+    FKeepAlive        : IDialogBuilder;
+    FDialogRect       : TRectangle;
+    FTimeoutButton    : TFmxObject;
+    FTimeoutOrigText  : string;
+    FTimeoutRemaining : Integer;
+    FTimeoutCancelled : Boolean;
+    procedure ApplyEntranceAnimation(const AOverlay: TLayout;
+                                     const ADialogRect: TRectangle);
+    procedure ApplyExitAnimation(const AOverlay: TLayout;
+                                 const ADialogRect: TRectangle;
+                                 const AOnComplete: TProc);
+    procedure StartTimeoutCountdown;
+    procedure UpdateTimeoutButtonText;
+    procedure AutoClickTimeoutButton;
   protected
     FBtnLayout: TFlowLayout;
     procedure InternalShow(const AForm: TCommonCustomForm); override;
-    function  CalculateMessageHeight(const AText: string; const AWidth: Single; const AFont: TFont): Single;
+    function  CalculateMessageHeight(const AText: string; const AWidth: Single;
+                                     const AFont: TFont): Single;
     procedure ButtonClick(Sender: TObject);
     procedure ButtonTap(Sender: TObject; const Point: TPointF);
     procedure OnBackgroundClick(Sender: TObject);
     procedure CloseDialog(AOverlay: TLayout);
     // Sub-methods extracted from InternalShow (R6+R9)
     function  GetPlatformScale: Single;
-    function  BuildOverlay(const AParent: TCommonCustomForm; out ABgRect: TRectangle): TLayout;
+    function  BuildOverlay(const AParent: TCommonCustomForm;
+                           out ABgRect: TRectangle): TLayout;
     function  BuildDialogRect(const AOverlay: TLayout): TRectangle;
     procedure BuildHeader(const ADialogRect: TRectangle);
     procedure BuildBody(const ADialogRect: TRectangle;
                         out AIconPresent: Boolean; out ABodyLayout: TLayout);
-    procedure BuildButtons(const AOverlay: TLayout; const ADialogRect: TRectangle);
+    procedure BuildButtons(const AOverlay: TLayout;
+                           const ADialogRect: TRectangle);
     function  CalculateFinalHeight(const ABodyLayout: TLayout;
                                    const AIconPresent: Boolean): Single;
-    procedure PaintColoredBtn(Sender: TObject; Canvas: TCanvas; const ARect: TRectF);
+    procedure PaintColoredBtn(Sender: TObject; Canvas: TCanvas;
+                              const ARect: TRectF);
   end;
 
 implementation
@@ -110,7 +129,21 @@ begin
     LBgRect.OnClick := OnBackgroundClick;
   end;
 
+  // Prepare initial state for entrance animation BEFORE making the dialog visible
+  case FAnimation of
+    danFade:
+      LOverlay.Opacity := 0;
+    danScale:
+    begin
+      LDialogRect.Scale.X := 0.8;
+      LDialogRect.Scale.Y := 0.8;
+    end;
+  end;
+
   FKeepAlive := Self;
+
+  if FAnimation <> TDialogAnimation.danNone then
+    ApplyEntranceAnimation(LOverlay, LDialogRect);
 end;
 
 function TFMXDialog.BuildOverlay(const AParent: TCommonCustomForm;
@@ -149,6 +182,7 @@ begin
   LDialogRect.Fill.Color := TAlphaColorRec.White;
   LDialogRect.Stroke.Kind := TBrushKind.None;
   LDialogRect.Padding.Rect := RectF(4, 4, 4, 4);
+  FDialogRect := LDialogRect;
   Result := LDialogRect;
 end;
 
@@ -307,6 +341,11 @@ begin
   else
     LWidthButtons := Round(C_BaseDialogWidth / FButtonHandlers.Count) - 24;
 
+  FTimeoutButton    := nil;
+  FTimeoutOrigText  := '';
+  FTimeoutRemaining := 0;
+  FTimeoutCancelled := False;
+
   for I := 0 to FButtonHandlers.Count - 1 do
   begin
     LRec := FButtonHandlers[I];
@@ -358,6 +397,14 @@ begin
 
       LColorRect.TagObject  := LRec;                   // click handler (unchanged)
       LColorRect.OnClick    := ButtonClick;
+
+      if LRec.Timeout > 0 then
+      begin
+        FTimeoutButton    := LColorRect;
+        FTimeoutOrigText  := LRec.Text;
+        FTimeoutRemaining := LRec.Timeout;
+        FTimeoutCancelled := False;
+      end;
     end
     else
     begin
@@ -385,8 +432,19 @@ begin
         LBtn.OnTap   := ButtonTap
       else
         LBtn.OnClick := ButtonClick;
+
+      if LRec.Timeout > 0 then
+      begin
+        FTimeoutButton    := LBtn;
+        FTimeoutOrigText  := LRec.Text;
+        FTimeoutRemaining := LRec.Timeout;
+        FTimeoutCancelled := False;
+      end;
     end;
   end;
+
+  if Assigned(FTimeoutButton) then
+    StartTimeoutCountdown;
 end;
 
 function TFMXDialog.CalculateFinalHeight(const ABodyLayout: TLayout;
@@ -433,15 +491,22 @@ end;
 
 procedure TFMXDialog.CloseDialog(AOverlay: TLayout);
 var
-  I          : Integer;
-  LChild     : TFmxObject;
-  LKeepAlive : IDialogBuilder;
+  I           : Integer;
+  LChild      : TFmxObject;
+  LKeepAlive  : IDialogBuilder;
+  LDialogRect : TRectangle;
+  LDoDestroy  : TProc;
 begin
   if not Assigned(AOverlay) then
     Exit;
 
-  LKeepAlive := FKeepAlive;
-  FKeepAlive := nil;
+  FTimeoutCancelled := True;
+  FTimeoutButton    := nil;
+
+  LKeepAlive  := FKeepAlive;
+  FKeepAlive  := nil;
+  LDialogRect := FDialogRect;
+  FDialogRect := nil;
 
   // Nil the overlay reference on each handler.
   // Handlers are owned by FButtonHandlers (TObjectList OwnsObjects=True) — do NOT free here.
@@ -459,12 +524,21 @@ begin
     end;
   FBtnLayout := nil;
 
-  AOverlay.Parent := nil;
-  {$IF DEFINED(ANDROID) OR DEFINED(IOS)}
-  AOverlay.DisposeOf;
-  {$ELSE}
-  AOverlay.Free;
-  {$ENDIF}
+  LDoDestroy := procedure
+  begin
+    AOverlay.Parent := nil;
+    {$IF DEFINED(ANDROID) OR DEFINED(IOS)}
+    AOverlay.DisposeOf;
+    {$ELSE}
+    AOverlay.Free;
+    {$ENDIF}
+    LKeepAlive := nil;
+  end;
+
+  if FAnimation = TDialogAnimation.danNone then
+    LDoDestroy()
+  else
+    ApplyExitAnimation(AOverlay, LDialogRect, LDoDestroy);
 end;
 
 procedure TFMXDialog.OnBackgroundClick(Sender: TObject);
@@ -546,7 +620,6 @@ begin
   end;
 end;
 
-
 procedure TFMXDialog.PaintColoredBtn(Sender: TObject; Canvas: TCanvas;
   const ARect: TRectF);
 var
@@ -575,6 +648,145 @@ begin
   finally
     Canvas.RestoreState(LState);
   end;
+end;
+
+{ Animações }
+
+procedure TFMXDialog.ApplyEntranceAnimation(const AOverlay: TLayout;
+  const ADialogRect: TRectangle);
+begin
+  case FAnimation of
+    danFade:
+      TThread.ForceQueue(nil, procedure
+      begin
+        TAnimator.AnimateFloat(AOverlay, 'Opacity', 1, 0.25);
+      end);
+
+    danScale:
+    begin
+      TAnimator.AnimateFloat(ADialogRect, 'Scale.X', 1.0, 0.3,
+        TAnimationType.Out, TInterpolationType.Back);
+      TAnimator.AnimateFloat(ADialogRect, 'Scale.Y', 1.0, 0.3,
+        TAnimationType.Out, TInterpolationType.Back);
+    end;
+
+    danSlide:
+      TThread.ForceQueue(nil, procedure
+      var
+        LTargetY: Single;
+      begin
+        LTargetY           := ADialogRect.Position.Y;
+        ADialogRect.Align  := TAlignLayout.None;
+        ADialogRect.Position.X := (AOverlay.Width  - ADialogRect.Width)  / 2;
+        ADialogRect.Position.Y := -ADialogRect.Height;
+        TAnimator.AnimateFloat(ADialogRect, 'Position.Y', LTargetY, 0.3,
+          TAnimationType.Out, TInterpolationType.Quadratic);
+      end);
+  end;
+end;
+
+procedure TFMXDialog.ApplyExitAnimation(const AOverlay: TLayout;
+  const ADialogRect: TRectangle; const AOnComplete: TProc);
+// TFloatAnimation.OnFinish is TNotifyEvent (method pointer) — incompatible with
+// anonymous TProc. We start the visual animations and then fire AOnComplete from
+// a background thread after the matching duration so the overlay is already
+// invisible when it gets freed.
+var
+  LDurationMs: Integer;
+begin
+  case FAnimation of
+    danFade:
+    begin
+      TAnimator.AnimateFloat(AOverlay, 'Opacity', 0.0, 0.2);
+      LDurationMs := 220;
+    end;
+
+    danScale:
+    begin
+      TAnimator.AnimateFloat(AOverlay, 'Opacity', 0.0, 0.2);
+      if Assigned(ADialogRect) then
+      begin
+        TAnimator.AnimateFloat(ADialogRect, 'Scale.X', 0.8, 0.2);
+        TAnimator.AnimateFloat(ADialogRect, 'Scale.Y', 0.8, 0.2);
+      end;
+      LDurationMs := 220;
+    end;
+
+    danSlide:
+    begin
+      TAnimator.AnimateFloat(AOverlay, 'Opacity', 0.0, 0.25);
+      if Assigned(ADialogRect) then
+      begin
+        if ADialogRect.Align = TAlignLayout.Center then
+        begin
+          ADialogRect.Align      := TAlignLayout.None;
+          ADialogRect.Position.X := (AOverlay.Width - ADialogRect.Width) / 2;
+        end;
+        TAnimator.AnimateFloat(ADialogRect, 'Position.Y', AOverlay.Height, 0.25);
+      end;
+      LDurationMs := 270;
+    end;
+  else
+    LDurationMs := 0;
+  end;
+
+  // Fire the destroy callback after the animation completes.
+  // Sleep runs on a pool thread; ForceQueue marshals back to the UI thread.
+  TThread.CreateAnonymousThread(procedure
+  begin
+    Sleep(LDurationMs);
+    TThread.ForceQueue(nil, procedure begin AOnComplete; end);
+  end).Start;
+end;
+
+{ Timeout countdown }
+
+procedure TFMXDialog.StartTimeoutCountdown;
+begin
+  UpdateTimeoutButtonText;  // mostra "(N)" imediatamente
+  TThread.CreateAnonymousThread(procedure
+  begin
+    while (FTimeoutRemaining > 0) and not FTimeoutCancelled do
+    begin
+      Sleep(1000);
+      if FTimeoutCancelled then
+        Exit;
+      TThread.Queue(nil, procedure
+      begin
+        if FTimeoutCancelled then
+          Exit;
+        Dec(FTimeoutRemaining);
+        if FTimeoutRemaining > 0 then
+          UpdateTimeoutButtonText
+        else
+          AutoClickTimeoutButton;
+      end);
+    end;
+  end).Start;
+end;
+
+procedure TFMXDialog.UpdateTimeoutButtonText;
+var
+  LNewText: string;
+begin
+  if not Assigned(FTimeoutButton) then
+    Exit;
+
+  LNewText := FTimeoutOrigText + ' (' + FTimeoutRemaining.ToString + ')';
+
+  if FTimeoutButton is TButton then
+    TButton(FTimeoutButton).Text := LNewText
+  else if FTimeoutButton is TRectangle then
+  begin
+    TRectangle(FTimeoutButton).TagString := LNewText;
+    TRectangle(FTimeoutButton).Repaint;
+  end;
+end;
+
+procedure TFMXDialog.AutoClickTimeoutButton;
+begin
+  if Assigned(FTimeoutButton) then
+    ButtonClick(FTimeoutButton);
 end;
 
 end.

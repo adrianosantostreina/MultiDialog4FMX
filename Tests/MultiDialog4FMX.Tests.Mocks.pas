@@ -58,6 +58,7 @@ type
     property CustomSVG: string read FCustomSVG;
     property CustomIconColor: TAlphaColor read FCustomIconColor;
     property ResultCallback: TDialogResultProc read FResultCallback;
+    property Animation: TDialogAnimation read FAnimation;
   end;
 
 implementation

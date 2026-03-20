@@ -75,6 +75,15 @@ type
 
     [Test]
     procedure TestAddButton_TapEvent_ModalResult;
+
+    [Test]
+    procedure TestAddButton_WithTimeout_StoresValue;
+
+    [Test]
+    procedure TestAddButton_WithTimeout_NoHandlers;
+
+    [Test]
+    procedure TestAddButton_WithTimeout_DefaultIsZero;
   end;
 
 implementation
@@ -246,6 +255,32 @@ begin
     TAlphaColorRec.Null, '', mrCancel);
   Assert.AreEqual(mrCancel, FDialog.ButtonHandlers[0].ModalResult,
     'Overload TTapEvent deve repassar AModalResult');
+end;
+
+procedure TButtonTests.TestAddButton_WithTimeout_StoresValue;
+begin
+  FDialog.Buttons.AddButton('OK', 5);
+  Assert.AreEqual(1, FDialog.ButtonHandlers.Count);
+  Assert.AreEqual(5, FDialog.ButtonHandlers[0].Timeout,
+    'Timeout deve ser armazenado como 5');
+end;
+
+procedure TButtonTests.TestAddButton_WithTimeout_NoHandlers;
+var
+  Handler: TButtonHandler;
+begin
+  FDialog.Buttons.AddButton('OK', 3);
+  Handler := FDialog.ButtonHandlers[0];
+  Assert.IsFalse(Assigned(Handler.ClickHandler),     'ClickHandler deve ser nil');
+  Assert.IsFalse(Assigned(Handler.TapHandler),       'TapHandler deve ser nil');
+  Assert.IsFalse(Assigned(Handler.AnonymousHandler), 'AnonymousHandler deve ser nil');
+end;
+
+procedure TButtonTests.TestAddButton_WithTimeout_DefaultIsZero;
+begin
+  FDialog.Buttons.AddButton('OK');
+  Assert.AreEqual(0, FDialog.ButtonHandlers[0].Timeout,
+    'Botão sem timeout deve ter Timeout = 0');
 end;
 
 initialization

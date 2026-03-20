@@ -84,6 +84,12 @@ type
 
     [Test]
     procedure TestSetOnResult_NilArg_NoException;
+
+    [Test]
+    procedure TestSetAnimation_StoresValue;
+
+    [Test]
+    procedure TestSetAnimation_DefaultIsNone;
   end;
 
 implementation
@@ -256,6 +262,19 @@ begin
     begin
       FDialog.SetOnResult(nil);
     end);
+end;
+
+procedure TDialogBuilderTests.TestSetAnimation_StoresValue;
+begin
+  FDialog.SetAnimation(TDialogAnimation.danFade);
+  Assert.AreEqual(TDialogAnimation.danFade, FDialog.Animation,
+    'SetAnimation deve armazenar danFade');
+end;
+
+procedure TDialogBuilderTests.TestSetAnimation_DefaultIsNone;
+begin
+  Assert.AreEqual(TDialogAnimation.danNone, FDialog.Animation,
+    'Animação padrão deve ser danNone');
 end;
 
 initialization

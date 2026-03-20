@@ -157,13 +157,16 @@
         </DelphiCompile>
         <DCCReference Include="..\src\MultiDialog4FMX.Interfaces.pas"/>
         <DCCReference Include="..\src\MultiDialog4FMX.Base.pas"/>
+        <DCCReference Include="..\src\MultiDialog4FMX.FMX.pas"/>
         <DCCReference Include="..\src\MultiDialog4FMX.Factory.pas"/>
         <DCCReference Include="..\src\MultiDialog4FMX.Android.pas"/>
+        <DCCReference Include="..\src\MultiDialog4FMX.Desktop.pas"/>
         <DCCReference Include="MultiDialog4FMX.Tests.Mocks.pas"/>
         <DCCReference Include="MultiDialog4FMX.Tests.Builder.pas"/>
         <DCCReference Include="MultiDialog4FMX.Tests.Buttons.pas"/>
         <DCCReference Include="MultiDialog4FMX.Tests.Factory.pas"/>
         <DCCReference Include="MultiDialog4FMX.Tests.Android.pas"/>
+        <DCCReference Include="MultiDialog4FMX.Tests.Desktop.pas"/>
         <DCCReference Include="MultiDialog4FMX.Tests.MemoryLeaks.pas"/>
         <None Include="ModelSupport_MultiDialog4FMX.Tests\default.txaPackage"/>
         <BuildConfiguration Include="Base">

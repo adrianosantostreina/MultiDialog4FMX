@@ -31,6 +31,7 @@ type
     FStyleLookup: string;
     FOverlay: TLayout;
     FModalResult: TModalResult;
+    FTimeout: Integer;
   public
     constructor Create;
     destructor Destroy; override;
@@ -44,6 +45,7 @@ type
     property StyleLookup: string read FStyleLookup write FStyleLookup;
     property Overlay: TLayout read FOverlay write FOverlay;
     property ModalResult: TModalResult read FModalResult write FModalResult;
+    property Timeout: Integer read FTimeout write FTimeout;
   end;
   TButtonHandlerList = TObjectList<TButtonHandler>;
 
@@ -94,6 +96,7 @@ type
     function AddButton(const AText: string; const AOnSimpleClick: TProc; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
     function AddButton(const AText: string; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
     function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
+    function AddButton(const AText: string; const ATimeout: Integer; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
     function &End: IDialogBuilder;
   end;
 
@@ -299,6 +302,29 @@ begin
 
   FParent.FButtonHandlers.Add(Rec);
 
+  Result := Self;
+end;
+
+function TDialogButtonsBuilder.AddButton(const AText: string;
+  const ATimeout: Integer; const AColor: TAlphaColor = TAlphaColorRec.Null;
+  const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder;
+var
+  Rec: TButtonHandler;
+begin
+  if FParent.FButtonHandlers.Count >= 4 then
+    raise Exception.Create(C_MaxButtonsMsg);
+
+  Rec := TButtonHandler.Create;
+  Rec.Text             := AText;
+  Rec.ClickHandler     := nil;
+  Rec.TapHandler       := nil;
+  Rec.AnonymousHandler := nil;
+  Rec.Color            := AColor;
+  Rec.StyleLookup      := AStyleLookup;
+  Rec.ModalResult      := AModalResult;
+  Rec.Timeout          := ATimeout;
+
+  FParent.FButtonHandlers.Add(Rec);
   Result := Self;
 end;
 

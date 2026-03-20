@@ -115,6 +115,12 @@ type
     function AddButton(const AText: string; const AOnTap: TTapEvent; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
 
     /// <summary>
+    /// Adiciona um botão sem evento que fecha automaticamente após ATimeout segundos,
+    /// exibindo contagem regressiva no texto.
+    /// </summary>
+    function AddButton(const AText: string; const ATimeout: Integer; const AColor: TAlphaColor = TAlphaColorRec.Null; const AStyleLookup: string = ''; const AModalResult: TModalResult = mrOk): IDialogButtonsBuilder; overload;
+
+    /// <summary>
     /// Finaliza a adição de botões e retorna ao builder principal.
     /// </summary>
     function &End: IDialogBuilder;
