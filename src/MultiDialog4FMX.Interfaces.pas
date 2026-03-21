@@ -13,6 +13,7 @@ uses
 type
   TMultiDialogType = (mdtCustom, mdtWarning, mdtError, mdtInformation, mdtConfirmation, mdtQuestion);
   TDialogAnimation = (danNone, danFade, danScale, danSlide);
+  TDialogTheme     = (dthAuto, dthLight, dthDark);
   TDialogResultProc = reference to procedure(const AResult: TModalResult);
 
   IDialogButtonsBuilder = interface;
@@ -56,6 +57,11 @@ type
     /// Define a animação de entrada/saída.
     /// </summary>
     function SetAnimation(const AAnimation: TDialogAnimation): IDialogBuilder;
+
+    /// <summary>
+    /// Define o tema de cores do diálogo (claro, escuro ou automático pelo sistema).
+    /// </summary>
+    function SetTheme(const ATheme: TDialogTheme): IDialogBuilder;
 
     /// <summary>
     /// Define um SVG customizado para o ícone do diálogo.
