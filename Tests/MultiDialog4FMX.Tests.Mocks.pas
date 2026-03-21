@@ -59,6 +59,7 @@ type
     property CustomIconColor: TAlphaColor read FCustomIconColor;
     property ResultCallback: TDialogResultProc read FResultCallback;
     property Animation: TDialogAnimation read FAnimation;
+    property Theme: TDialogTheme read FTheme;
   end;
 
 implementation
