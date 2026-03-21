@@ -353,10 +353,11 @@ var
   LRec          : TButtonHandler;
   LBtn          : TButton;
   LColorRect    : TRectangle;
-  LIsResponsive : Boolean;
-  LMarginRight  : Integer;
-  LMarginTop    : Integer;
-  I             : Integer;
+  LIsResponsive   : Boolean;
+  LMarginRight    : Integer;
+  LMarginTop      : Integer;
+  LEffectiveColor : TAlphaColor;
+  I               : Integer;
 begin
   LBtnLayout := TFlowLayout.Create(ADialogRect);
   LBtnLayout.Parent := ADialogRect;
@@ -415,7 +416,11 @@ begin
 
     LRec.Overlay := AOverlay;
 
-    if LRec.Color <> TAlphaColor(0) then
+    LEffectiveColor := LRec.Color;
+    if ResolveIsDark and (LEffectiveColor = TAlphaColor(0)) then
+      LEffectiveColor := $FF555555;  // neutral dark-grey for uncoloured buttons in dark mode
+
+    if LEffectiveColor <> TAlphaColor(0) then
     begin
       // Colored button: canvas-painted TRectangle — avoids Android TLabel/TBrush
       // rendering issue where all buttons inherit the last button's text and color.
@@ -431,7 +436,7 @@ begin
       LColorRect.Margins.Right := LMarginRight;
       LColorRect.Margins.Top   := LMarginTop;
 
-      LColorRect.Tag        := NativeInt(LRec.Color);  // per-instance color for paint handler
+      LColorRect.Tag        := NativeInt(LEffectiveColor);  // per-instance color for paint handler
       LColorRect.TagString  := LRec.Text;              // per-instance text for paint handler
       LColorRect.OnPainting := PaintColoredBtn;        // self-contained paint
 
