@@ -73,7 +73,11 @@ const
   SVG_WARNING  = 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z';
   SVG_ERROR    = 'M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z';
   SVG_INFO     = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z';
-  SVG_QUESTION = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z';
+  // Literal quebrado em pedacos <=255 chars: Delphi <=11 limita literais de string a 255
+  // elementos (E2056); o Delphi 12 removeu o limite. A concatenacao sofre constant folding,
+  // entao o valor final e identico em todas as versoes (sem guarda condicional necessaria).
+  SVG_QUESTION = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2z' +
+                 'm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z';
   SVG_SUCCESS  = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z';
 
   // Base layout constants (logical points; multiply by Screen.Scale for DPI-aware size).
@@ -91,19 +95,30 @@ const
 { TFMXDialog }
 
 function TFMXDialog.ResolveIsDark: Boolean;
+{$IF CompilerVersion >= 35.0}
+// Delphi 11 Alexandria (CV 35.0) introduziu IFMXSystemAppearanceService/TSystemThemeKind
+// (FMX.Platform). Em <= 10.4 esses identificadores nao existem (E2003), por isso a var
+// e a deteccao do tema do SO ficam isoladas nesta guarda.
 var
   LSvc: IFMXSystemAppearanceService;
+{$IFEND}
 begin
   case FTheme of
     dthDark:  Result := True;
     dthLight: Result := False;
   else
-    // dthAuto: query the platform; fall back to Light if service unavailable
+    // dthAuto: consulta o tema do sistema operacional
+    {$IF CompilerVersion >= 35.0}
+    // Delphi 11+: detecta automaticamente o tema do SO; fallback Light se indisponivel
     if TPlatformServices.Current.SupportsPlatformService(
          IFMXSystemAppearanceService, LSvc) then
       Result := LSvc.ThemeKind = TSystemThemeKind.Dark
     else
       Result := False;
+    {$ELSE}
+    // Delphi <= 10.4 (CV <= 34): sem servico de tema do SO — assume Light
+    Result := False;
+    {$IFEND}
   end;
 end;
 
