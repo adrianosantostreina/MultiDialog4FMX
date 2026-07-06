@@ -378,12 +378,12 @@ procedure TAndroidDialogCloseTests.TestButtonClick_CallsHandlerAndClearsTagObjec
 // R7: usa TButtonHandler (nao TButtonHandlerObj).
 var
   LOverlay  : TLayout;
-  LBtnLayout: TFlowLayout;
+  LBtnLayout: TLayout;
   LBtn      : TButton;
   LObj      : TButtonHandler;
 begin
   LOverlay   := TLayout.Create(nil);
-  LBtnLayout := TFlowLayout.Create(LOverlay);
+  LBtnLayout := TLayout.Create(LOverlay);
   LBtnLayout.Parent := LOverlay;
   LBtn := TButton.Create(LBtnLayout);
   LBtn.Parent := LBtnLayout;
@@ -408,12 +408,12 @@ procedure TAndroidDialogCloseTests.TestButtonClick_WhenHandlerRaises_OverlayIsSt
 // R7: usa TButtonHandler. Apos excecao: overlay fechado, LObj.Overlay = nil.
 var
   LOverlay  : TLayout;
-  LBtnLayout: TFlowLayout;
+  LBtnLayout: TLayout;
   LBtn      : TButton;
   LObj      : TButtonHandler;
 begin
   LOverlay   := TLayout.Create(nil);
-  LBtnLayout := TFlowLayout.Create(LOverlay);
+  LBtnLayout := TLayout.Create(LOverlay);
   LBtnLayout.Parent := LOverlay;
   LBtn := TButton.Create(LBtnLayout);
   LBtn.Parent := LBtnLayout;
@@ -449,14 +449,14 @@ procedure TAndroidDialogCloseTests.TestCloseDialog_FreesAllRemainingTagObjects;
 // R7: CloseDialog deve nular Overlay de TODOS os handlers dos botoes restantes.
 var
   LOverlay    : TLayout;
-  LBtnLayout  : TFlowLayout;
+  LBtnLayout  : TLayout;
   LBtn        : array[0..2] of TButton;
   LObj        : array[0..2] of TButtonHandler;
   I           : Integer;
   LTagNilCount: Integer;
 begin
   LOverlay   := TLayout.Create(nil);
-  LBtnLayout := TFlowLayout.Create(LOverlay);
+  LBtnLayout := TLayout.Create(LOverlay);
   LBtnLayout.Parent := LOverlay;
 
   for I := 0 to 2 do
@@ -494,7 +494,7 @@ end;
 procedure TAndroidDialogCloseTests.TestButtonClick_InvokesResultCallback;
 var
   LOverlay       : TLayout;
-  LBtnLayout     : TFlowLayout;
+  LBtnLayout     : TLayout;
   LBtn           : TButton;
   LObj           : TButtonHandler;
   LCallbackResult: TModalResult;
@@ -511,7 +511,7 @@ begin
     end;
 
   LOverlay   := TLayout.Create(nil);
-  LBtnLayout := TFlowLayout.Create(LOverlay);
+  LBtnLayout := TLayout.Create(LOverlay);
   LBtnLayout.Parent := LOverlay;
   LBtn := TButton.Create(LBtnLayout);
   LBtn.Parent := LBtnLayout;
@@ -536,13 +536,13 @@ end;
 procedure TAndroidDialogCloseTests.TestButtonClick_NoCallback_NoException;
 var
   LOverlay  : TLayout;
-  LBtnLayout: TFlowLayout;
+  LBtnLayout: TLayout;
   LBtn      : TButton;
   LObj      : TButtonHandler;
 begin
   // FResultCallback is nil by default — must not raise
   LOverlay   := TLayout.Create(nil);
-  LBtnLayout := TFlowLayout.Create(LOverlay);
+  LBtnLayout := TLayout.Create(LOverlay);
   LBtnLayout.Parent := LOverlay;
   LBtn := TButton.Create(LBtnLayout);
   LBtn.Parent := LBtnLayout;
@@ -602,7 +602,7 @@ procedure TAndroidDialogCloseTests.TestButtonClick_CallbackBeforeClose;
 // Verifies callback is synchronous (called before ForceQueue defers CloseDialog)
 var
   LOverlay       : TLayout;
-  LBtnLayout     : TFlowLayout;
+  LBtnLayout     : TLayout;
   LBtn           : TButton;
   LObj           : TButtonHandler;
   LCallbackCalled: Boolean;
@@ -617,7 +617,7 @@ begin
     end;
 
   LOverlay   := TLayout.Create(nil);
-  LBtnLayout := TFlowLayout.Create(LOverlay);
+  LBtnLayout := TLayout.Create(LOverlay);
   LBtnLayout.Parent := LOverlay;
   LBtn := TButton.Create(LBtnLayout);
   LBtn.Parent := LBtnLayout;
@@ -778,13 +778,13 @@ end;
 procedure TAndroidDialogLayoutTests.TestCalculateFinalHeight_WithTitle_GreaterThanWithout;
 var
   LBodyLayout     : TLayout;
-  LBtnLayoutMock  : TFlowLayout;
+  LBtnLayoutMock  : TLayout;
   LHeightWithTitle: Single;
   LHeightNoTitle  : Single;
 begin
   LBodyLayout := TLayout.Create(nil);
   LBodyLayout.Height := 100;
-  LBtnLayoutMock := TFlowLayout.Create(nil);
+  LBtnLayoutMock := TLayout.Create(nil);
   LBtnLayoutMock.Height := 56;
 
   try
