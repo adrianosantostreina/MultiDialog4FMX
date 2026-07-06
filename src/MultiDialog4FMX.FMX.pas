@@ -42,7 +42,7 @@ type
     procedure UpdateTimeoutButtonText;
     procedure AutoClickTimeoutButton;
   protected
-    FBtnLayout: TFlowLayout;
+    FBtnLayout: TLayout;
     procedure InternalShow(const AForm: TCommonCustomForm); override;
     function  CalculateMessageHeight(const AText: string; const AWidth: Single;
                                      const AFont: TFont): Single;
@@ -73,7 +73,11 @@ const
   SVG_WARNING  = 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z';
   SVG_ERROR    = 'M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z';
   SVG_INFO     = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z';
-  SVG_QUESTION = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z';
+  // Literal quebrado em pedacos <=255 chars: Delphi <=11 limita literais de string a 255
+  // elementos (E2056); o Delphi 12 removeu o limite. A concatenacao sofre constant folding,
+  // entao o valor final e identico em todas as versoes (sem guarda condicional necessaria).
+  SVG_QUESTION = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2z' +
+                 'm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z';
   SVG_SUCCESS  = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z';
 
   // Base layout constants (logical points; multiply by Screen.Scale for DPI-aware size).
@@ -91,19 +95,30 @@ const
 { TFMXDialog }
 
 function TFMXDialog.ResolveIsDark: Boolean;
+{$IF CompilerVersion >= 35.0}
+// Delphi 11 Alexandria (CV 35.0) introduziu IFMXSystemAppearanceService/TSystemThemeKind
+// (FMX.Platform). Em <= 10.4 esses identificadores nao existem (E2003), por isso a var
+// e a deteccao do tema do SO ficam isoladas nesta guarda.
 var
   LSvc: IFMXSystemAppearanceService;
+{$IFEND}
 begin
   case FTheme of
     dthDark:  Result := True;
     dthLight: Result := False;
   else
-    // dthAuto: query the platform; fall back to Light if service unavailable
+    // dthAuto: consulta o tema do sistema operacional
+    {$IF CompilerVersion >= 35.0}
+    // Delphi 11+: detecta automaticamente o tema do SO; fallback Light se indisponivel
     if TPlatformServices.Current.SupportsPlatformService(
          IFMXSystemAppearanceService, LSvc) then
       Result := LSvc.ThemeKind = TSystemThemeKind.Dark
     else
       Result := False;
+    {$ELSE}
+    // Delphi <= 10.4 (CV <= 34): sem servico de tema do SO — assume Light
+    Result := False;
+    {$IFEND}
   end;
 end;
 
@@ -346,25 +361,34 @@ end;
 
 procedure TFMXDialog.BuildButtons(const AOverlay: TLayout;
   const ADialogRect: TRectangle);
+const
+  // Box width (300) minus box padding (4+4) minus row margins (4+4) = 284 dp usable width.
+  C_RowInnerWidth = C_BaseDialogWidth - 16;
+  C_BtnGap        = 8;
 var
-  LBtnLayout    : TFlowLayout;
+  // Plain TLayout with MANUAL X/Y positioning. TFlowLayout was used here before, but it
+  // paints its children at a vertical offset that differs from the position it reports
+  // on FMX <= 10.4 (Delphi 10.3.3): buttons drifted below the rounded bottom of the box
+  // while AbsoluteRect still claimed they were inside. Positioning every button by hand
+  // from the layout constants is deterministic and renders identically on all Delphi versions.
+  LBtnLayout    : TLayout;
   LWidthButtons : Single;
   LCurrentWidth : Single;
   LRec          : TButtonHandler;
   LBtn          : TButton;
   LColorRect    : TRectangle;
   LIsResponsive   : Boolean;
-  LMarginRight    : Integer;
-  LMarginTop      : Integer;
   LEffectiveColor : TAlphaColor;
+  LVOffset        : Single;   // vertical centering of a 40 dp button inside a 56 dp band
+  LRowTotalW      : Single;
+  LCurX           : Single;
+  LCurY           : Single;
   I               : Integer;
 begin
-  LBtnLayout := TFlowLayout.Create(ADialogRect);
+  LBtnLayout := TLayout.Create(ADialogRect);
   LBtnLayout.Parent := ADialogRect;
   LBtnLayout.Align := TAlignLayout.Bottom;
   LBtnLayout.Height := C_BaseButtonsHeight;
-  LBtnLayout.Justify := TFlowJustify.Center;
-  LBtnLayout.JustifyLastLine := TFlowJustify.Center;
   LBtnLayout.Margins.Rect := RectF(4, 0, 4, 4);
   FBtnLayout := LBtnLayout;
 
@@ -382,6 +406,17 @@ begin
   else
     LWidthButtons := Round(C_BaseDialogWidth / FButtonHandlers.Count) - 24;
 
+  LVOffset := (C_BaseButtonsHeight - C_BaseBtnHeight) / 2;  // = 8 dp
+
+  // Horizontal start of the first row, centered within the usable width.
+  if LIsResponsive then
+    LRowTotalW := 3 * LWidthButtons + 2 * C_BtnGap            // row 1 = 3 buttons
+  else
+    LRowTotalW := FButtonHandlers.Count * LWidthButtons +
+                  (FButtonHandlers.Count - 1) * C_BtnGap;
+  LCurX := (C_RowInnerWidth - LRowTotalW) / 2;
+  LCurY := LVOffset;
+
   FTimeoutButton    := nil;
   FTimeoutOrigText  := '';
   FTimeoutRemaining := 0;
@@ -391,28 +426,15 @@ begin
   begin
     LRec := FButtonHandlers[I];
 
-    if LIsResponsive then
+    if LIsResponsive and (I = 3) then
     begin
-      if I = 3 then
-      begin
-        // 4th button: full-width second row (268 dp = 3×84+2×8)
-        LCurrentWidth := C_BaseDialogWidth - 32;
-        LMarginRight  := 0;
-        LMarginTop    := 8;
-      end
-      else
-      begin
-        LCurrentWidth := LWidthButtons;
-        LMarginRight  := IfThen(I < 2, 8, 0);  // 0,1 → gap; 2 → no gap (end of row)
-        LMarginTop    := 0;
-      end;
+      // 4th button: full-width, centered on the second row (band top = 56 dp)
+      LCurrentWidth := C_BaseDialogWidth - 32;
+      LCurX         := (C_RowInnerWidth - LCurrentWidth) / 2;
+      LCurY         := C_BaseButtonsHeight + LVOffset;
     end
     else
-    begin
       LCurrentWidth := LWidthButtons;
-      LMarginRight  := IfThen(I < FButtonHandlers.Count - 1, 8, 0);
-      LMarginTop    := 0;
-    end;
 
     LRec.Overlay := AOverlay;
 
@@ -426,15 +448,16 @@ begin
       // rendering issue where all buttons inherit the last button's text and color.
       LColorRect := TRectangle.Create(LBtnLayout);
       LColorRect.Parent        := LBtnLayout;
+      LColorRect.Align         := TAlignLayout.None;
       LColorRect.Fill.Kind     := TBrushKind.None;   // suppress default fill; OnPainting draws it
       LColorRect.Stroke.Kind   := TBrushKind.None;
       LColorRect.XRadius       := 4;
       LColorRect.YRadius       := 4;
       LColorRect.Height        := C_BaseBtnHeight;
       LColorRect.Width         := LCurrentWidth;
+      LColorRect.Position.X    := LCurX;
+      LColorRect.Position.Y    := LCurY;
       LColorRect.HitTest       := True;
-      LColorRect.Margins.Right := LMarginRight;
-      LColorRect.Margins.Top   := LMarginTop;
 
       LColorRect.Tag        := NativeInt(LEffectiveColor);  // per-instance color for paint handler
       LColorRect.TagString  := LRec.Text;              // per-instance text for paint handler
@@ -456,13 +479,14 @@ begin
       // Default or styled button: TButton
       LBtn := TButton.Create(LBtnLayout);
       LBtn.Parent     := LBtnLayout;
+      LBtn.Align      := TAlignLayout.None;
       LBtn.Text       := LRec.Text;
       LBtn.TextSettings.Font.Size := FFontSize;
       LBtn.StyledSettings := [TStyledSetting.Style];
       LBtn.Height     := C_BaseBtnHeight;
       LBtn.Width      := LCurrentWidth;
-      LBtn.Margins.Right := LMarginRight;
-      LBtn.Margins.Top   := LMarginTop;
+      LBtn.Position.X := LCurX;
+      LBtn.Position.Y := LCurY;
 
       if LRec.StyleLookup <> '' then
       begin
@@ -486,6 +510,10 @@ begin
         FTimeoutCancelled := False;
       end;
     end;
+
+    // Advance X for the next button in the same (first) row.
+    if not (LIsResponsive and (I = 3)) then
+      LCurX := LCurX + LCurrentWidth + C_BtnGap;
   end;
 
   if Assigned(FTimeoutButton) then
