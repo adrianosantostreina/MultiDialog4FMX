@@ -42,7 +42,7 @@ type
     procedure UpdateTimeoutButtonText;
     procedure AutoClickTimeoutButton;
   protected
-    FBtnLayout: TFlowLayout;
+    FBtnLayout: TLayout;
     procedure InternalShow(const AForm: TCommonCustomForm); override;
     function  CalculateMessageHeight(const AText: string; const AWidth: Single;
                                      const AFont: TFont): Single;
@@ -361,25 +361,34 @@ end;
 
 procedure TFMXDialog.BuildButtons(const AOverlay: TLayout;
   const ADialogRect: TRectangle);
+const
+  // Box width (300) minus box padding (4+4) minus row margins (4+4) = 284 dp usable width.
+  C_RowInnerWidth = C_BaseDialogWidth - 16;
+  C_BtnGap        = 8;
 var
-  LBtnLayout    : TFlowLayout;
+  // Plain TLayout with MANUAL X/Y positioning. TFlowLayout was used here before, but it
+  // paints its children at a vertical offset that differs from the position it reports
+  // on FMX <= 10.4 (Delphi 10.3.3): buttons drifted below the rounded bottom of the box
+  // while AbsoluteRect still claimed they were inside. Positioning every button by hand
+  // from the layout constants is deterministic and renders identically on all Delphi versions.
+  LBtnLayout    : TLayout;
   LWidthButtons : Single;
   LCurrentWidth : Single;
   LRec          : TButtonHandler;
   LBtn          : TButton;
   LColorRect    : TRectangle;
   LIsResponsive   : Boolean;
-  LMarginRight    : Integer;
-  LMarginTop      : Integer;
   LEffectiveColor : TAlphaColor;
+  LVOffset        : Single;   // vertical centering of a 40 dp button inside a 56 dp band
+  LRowTotalW      : Single;
+  LCurX           : Single;
+  LCurY           : Single;
   I               : Integer;
 begin
-  LBtnLayout := TFlowLayout.Create(ADialogRect);
+  LBtnLayout := TLayout.Create(ADialogRect);
   LBtnLayout.Parent := ADialogRect;
   LBtnLayout.Align := TAlignLayout.Bottom;
   LBtnLayout.Height := C_BaseButtonsHeight;
-  LBtnLayout.Justify := TFlowJustify.Center;
-  LBtnLayout.JustifyLastLine := TFlowJustify.Center;
   LBtnLayout.Margins.Rect := RectF(4, 0, 4, 4);
   FBtnLayout := LBtnLayout;
 
@@ -397,6 +406,17 @@ begin
   else
     LWidthButtons := Round(C_BaseDialogWidth / FButtonHandlers.Count) - 24;
 
+  LVOffset := (C_BaseButtonsHeight - C_BaseBtnHeight) / 2;  // = 8 dp
+
+  // Horizontal start of the first row, centered within the usable width.
+  if LIsResponsive then
+    LRowTotalW := 3 * LWidthButtons + 2 * C_BtnGap            // row 1 = 3 buttons
+  else
+    LRowTotalW := FButtonHandlers.Count * LWidthButtons +
+                  (FButtonHandlers.Count - 1) * C_BtnGap;
+  LCurX := (C_RowInnerWidth - LRowTotalW) / 2;
+  LCurY := LVOffset;
+
   FTimeoutButton    := nil;
   FTimeoutOrigText  := '';
   FTimeoutRemaining := 0;
@@ -406,28 +426,15 @@ begin
   begin
     LRec := FButtonHandlers[I];
 
-    if LIsResponsive then
+    if LIsResponsive and (I = 3) then
     begin
-      if I = 3 then
-      begin
-        // 4th button: full-width second row (268 dp = 3×84+2×8)
-        LCurrentWidth := C_BaseDialogWidth - 32;
-        LMarginRight  := 0;
-        LMarginTop    := 8;
-      end
-      else
-      begin
-        LCurrentWidth := LWidthButtons;
-        LMarginRight  := IfThen(I < 2, 8, 0);  // 0,1 → gap; 2 → no gap (end of row)
-        LMarginTop    := 0;
-      end;
+      // 4th button: full-width, centered on the second row (band top = 56 dp)
+      LCurrentWidth := C_BaseDialogWidth - 32;
+      LCurX         := (C_RowInnerWidth - LCurrentWidth) / 2;
+      LCurY         := C_BaseButtonsHeight + LVOffset;
     end
     else
-    begin
       LCurrentWidth := LWidthButtons;
-      LMarginRight  := IfThen(I < FButtonHandlers.Count - 1, 8, 0);
-      LMarginTop    := 0;
-    end;
 
     LRec.Overlay := AOverlay;
 
@@ -441,15 +448,16 @@ begin
       // rendering issue where all buttons inherit the last button's text and color.
       LColorRect := TRectangle.Create(LBtnLayout);
       LColorRect.Parent        := LBtnLayout;
+      LColorRect.Align         := TAlignLayout.None;
       LColorRect.Fill.Kind     := TBrushKind.None;   // suppress default fill; OnPainting draws it
       LColorRect.Stroke.Kind   := TBrushKind.None;
       LColorRect.XRadius       := 4;
       LColorRect.YRadius       := 4;
       LColorRect.Height        := C_BaseBtnHeight;
       LColorRect.Width         := LCurrentWidth;
+      LColorRect.Position.X    := LCurX;
+      LColorRect.Position.Y    := LCurY;
       LColorRect.HitTest       := True;
-      LColorRect.Margins.Right := LMarginRight;
-      LColorRect.Margins.Top   := LMarginTop;
 
       LColorRect.Tag        := NativeInt(LEffectiveColor);  // per-instance color for paint handler
       LColorRect.TagString  := LRec.Text;              // per-instance text for paint handler
@@ -471,13 +479,14 @@ begin
       // Default or styled button: TButton
       LBtn := TButton.Create(LBtnLayout);
       LBtn.Parent     := LBtnLayout;
+      LBtn.Align      := TAlignLayout.None;
       LBtn.Text       := LRec.Text;
       LBtn.TextSettings.Font.Size := FFontSize;
       LBtn.StyledSettings := [TStyledSetting.Style];
       LBtn.Height     := C_BaseBtnHeight;
       LBtn.Width      := LCurrentWidth;
-      LBtn.Margins.Right := LMarginRight;
-      LBtn.Margins.Top   := LMarginTop;
+      LBtn.Position.X := LCurX;
+      LBtn.Position.Y := LCurY;
 
       if LRec.StyleLookup <> '' then
       begin
@@ -501,6 +510,10 @@ begin
         FTimeoutCancelled := False;
       end;
     end;
+
+    // Advance X for the next button in the same (first) row.
+    if not (LIsResponsive and (I = 3)) then
+      LCurX := LCurX + LCurrentWidth + C_BtnGap;
   end;
 
   if Assigned(FTimeoutButton) then
