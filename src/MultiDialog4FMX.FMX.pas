@@ -76,8 +76,13 @@ const
   // Literal quebrado em pedacos <=255 chars: Delphi <=11 limita literais de string a 255
   // elementos (E2056); o Delphi 12 removeu o limite. A concatenacao sofre constant folding,
   // entao o valor final e identico em todas as versoes (sem guarda condicional necessaria).
+  // Numeros separados por espaco (ex. "-.9 .92" em vez de "-.9.92"): dois numeros com ponto
+  // decimal colados sem separador (so a troca de sinal/segundo ponto marca a fronteira) faz
+  // o parser de TPathData falhar com EConvertError ("X is not a valid floating point value"),
+  // abortando InternalShow antes de CalculateFinalHeight rodar (dialogo fica sem altura,
+  // botoes "flutuam" fora da caixa). Espaco extra e um separador SVG valido, geometria identica.
   SVG_QUESTION = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2z' +
-                 'm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z';
+                 'm2.07-7.75l-.9 .92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1 .45-2.1 1.17-2.83l1.24-1.26c.37-.36 .59-.86 .59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z';
   SVG_SUCCESS  = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z';
 
   // Base layout constants (logical points; multiply by Screen.Scale for DPI-aware size).
@@ -295,16 +300,25 @@ begin
     LIconPath.Stroke.Kind := TBrushKind.None;
 
     // --- SVG ---
-    if FCustomSVG <> '' then
-      LIconPath.Data.Data := FCustomSVG
-    else
-      case FMsgType of
-        mdtWarning:      LIconPath.Data.Data := SVG_WARNING;
-        mdtError:        LIconPath.Data.Data := SVG_ERROR;
-        mdtInformation:  LIconPath.Data.Data := SVG_INFO;
-        mdtQuestion:     LIconPath.Data.Data := SVG_QUESTION;
-        mdtConfirmation: LIconPath.Data.Data := SVG_SUCCESS;
-      end;
+    // Um path SVG malformado (customizado via SetCustomIcon, ou um builtin futuro) nao pode
+    // abortar a montagem do dialogo: CalculateFinalHeight (mais abaixo em InternalShow) so
+    // roda se este metodo completar. Sem o guard, uma excecao aqui deixa o LDialogRect sem
+    // altura definida e os botoes (montados antes, em BuildButtons) "flutuam" fora da caixa.
+    try
+      if FCustomSVG <> '' then
+        LIconPath.Data.Data := FCustomSVG
+      else
+        case FMsgType of
+          mdtWarning:      LIconPath.Data.Data := SVG_WARNING;
+          mdtError:        LIconPath.Data.Data := SVG_ERROR;
+          mdtInformation:  LIconPath.Data.Data := SVG_INFO;
+          mdtQuestion:     LIconPath.Data.Data := SVG_QUESTION;
+          mdtConfirmation: LIconPath.Data.Data := SVG_SUCCESS;
+        end;
+    except
+      // Degrada para "sem icone" (container 40x40 permanece, so o path fica vazio) em vez
+      // de propagar e interromper InternalShow no meio da montagem.
+    end;
 
     // --- Cor ---
     if FCustomIconColor <> TAlphaColor(0) then
