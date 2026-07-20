@@ -96,6 +96,12 @@ type
 
     [Test]
     procedure TestSetTheme_DefaultIsAuto;
+
+    [Test]
+    procedure TestShow_NoButtons_RaisesException;
+
+    [Test]
+    procedure TestShow_TwoButtonsNoHandler_NoException;
   end;
 
 implementation
@@ -294,6 +300,26 @@ procedure TDialogBuilderTests.TestSetTheme_DefaultIsAuto;
 begin
   Assert.AreEqual(TDialogTheme.dthAuto, FDialog.Theme,
     'Tema padrão deve ser dthAuto após Create');
+end;
+
+procedure TDialogBuilderTests.TestShow_NoButtons_RaisesException;
+begin
+  Assert.WillRaise(
+    procedure
+    begin
+      FDialog.Show;
+    end,
+    Exception);
+end;
+
+procedure TDialogBuilderTests.TestShow_TwoButtonsNoHandler_NoException;
+begin
+  FDialog.Buttons.AddButton('A').AddButton('B');
+  Assert.WillNotRaise(
+    procedure
+    begin
+      FDialog.Show;
+    end);
 end;
 
 initialization
