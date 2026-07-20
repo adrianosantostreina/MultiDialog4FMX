@@ -269,4 +269,13 @@ begin
     Result := 0;
 end;
 
+initialization
+
+finalization
+  // M1: TDialogQueueManager.Instance lazily creates FInstance via Create(nil) — with no
+  // owner, nothing frees it. FInstance is a private class var, but this unit's own
+  // finalization section can still reach it directly (visibility is per-unit, not
+  // per-class, for code living in the same unit as the class declaration).
+  FreeAndNil(TDialogQueueManager.FInstance);
+
 end.

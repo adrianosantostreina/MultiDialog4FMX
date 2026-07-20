@@ -603,6 +603,15 @@ var
   LForm       : TCommonCustomForm;
   LDoDestroy  : TProc;
 begin
+  // Defense in depth: if the instance was already Suppress()-ed (form destroyed while
+  // this call was queued), FAlive is False and nothing below is safe to touch — bail
+  // out before dereferencing FBtnLayout/FDialogRect/FSnapshot. This does NOT by itself
+  // protect against Self having already been deallocated (that requires a keepalive at
+  // the call site — see ButtonClick/ButtonTap/OnBackgroundClick), it only protects the
+  // remaining timing gap once we know we're still alive to run.
+  if not FAlive then
+    Exit;
+
   if not Assigned(AOverlay) then
     Exit;
 
@@ -654,6 +663,7 @@ procedure TFMXDialogInstance.OnBackgroundClick(Sender: TObject);
 var
   LObj    : TFmxObject;
   LOverlay: TLayout;
+  LSelf   : IDialogVisualInstance; // keeps Self alive until the deferred closure runs
 begin
   if Sender is TFmxObject then
   begin
@@ -666,7 +676,12 @@ begin
       // Defer CloseDialog: destroying the overlay inside a click handler leaves
       // the Win32 message pump in an inconsistent state (mouse capture stuck).
       // ForceQueue schedules execution after the current event returns.
-      TThread.ForceQueue(nil, procedure begin CloseDialog(LOverlay); end);
+      // LSelf is captured by the closure — this is what keeps Self (and therefore
+      // the FMX controls CloseDialog is about to dereference) alive if the owning
+      // form is destroyed before this closure runs; CloseDialog's own FAlive guard
+      // then makes it a safe no-op in that case instead of touching freed memory.
+      LSelf := Self;
+      TThread.ForceQueue(nil, procedure begin if Assigned(LSelf) then CloseDialog(LOverlay); end);
     end;
   end;
 end;
@@ -676,6 +691,7 @@ var
   Obj     : TButtonHandler;
   LOverlay: TLayout;
   LFmxObj : TFmxObject;
+  LSelf   : IDialogVisualInstance; // keeps Self alive until the deferred closure runs
 begin
   if not (Sender is TFmxObject) then Exit;
   LFmxObj := TFmxObject(Sender);
@@ -699,7 +715,9 @@ begin
       FSnapshot.ResultCallback(Obj.ModalResult);
   finally
     Obj.Overlay := nil;   // handler owned by FSnapshot.Buttons — do NOT free
-    TThread.ForceQueue(nil, procedure begin CloseDialog(LOverlay); end);
+    // See OnBackgroundClick for why LSelf must be captured by the closure.
+    LSelf := Self;
+    TThread.ForceQueue(nil, procedure begin if Assigned(LSelf) then CloseDialog(LOverlay); end);
   end;
 end;
 
@@ -708,6 +726,7 @@ var
   Obj     : TButtonHandler;
   LOverlay: TLayout;
   LFmxObj : TFmxObject;
+  LSelf   : IDialogVisualInstance; // keeps Self alive until the deferred closure runs
 begin
   if not (Sender is TFmxObject) then Exit;
   LFmxObj := TFmxObject(Sender);
@@ -725,7 +744,9 @@ begin
       FSnapshot.ResultCallback(Obj.ModalResult);
   finally
     Obj.Overlay := nil;   // handler owned by FSnapshot.Buttons — do NOT free
-    TThread.ForceQueue(nil, procedure begin CloseDialog(LOverlay); end);
+    // See OnBackgroundClick for why LSelf must be captured by the closure.
+    LSelf := Self;
+    TThread.ForceQueue(nil, procedure begin if Assigned(LSelf) then CloseDialog(LOverlay); end);
   end;
 end;
 
@@ -853,10 +874,20 @@ end;
 { Timeout countdown }
 
 procedure TFMXDialogInstance.StartTimeoutCountdown;
+var
+  LSelf: IDialogVisualInstance; // keeps Self alive for the whole life of the background
+                                 // thread + its queued closures — without this, the thread
+                                 // body/inner TThread.Queue closure below reference Self's
+                                 // fields via a raw pointer with no refcount, so a form
+                                 // destroyed (and Suppress-ed) mid-countdown would free the
+                                 // instance out from under this thread.
 begin
   UpdateTimeoutButtonText;  // mostra "(N)" imediatamente
+  LSelf := Self;
   TThread.CreateAnonymousThread(procedure
   begin
+    if not Assigned(LSelf) then
+      Exit;
     while (FTimeoutRemaining > 0) and not FTimeoutCancelled do
     begin
       Sleep(1000);
@@ -864,7 +895,7 @@ begin
         Exit;
       TThread.Queue(nil, procedure
       begin
-        if FTimeoutCancelled then
+        if not Assigned(LSelf) or FTimeoutCancelled then
           Exit;
         Dec(FTimeoutRemaining);
         if FTimeoutRemaining > 0 then

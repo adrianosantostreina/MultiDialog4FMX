@@ -8,7 +8,6 @@ uses
 
   FMX.Types,
   FMX.Forms,
-  FMX.Layouts,
 
   System.Classes,
   System.SysUtils,
