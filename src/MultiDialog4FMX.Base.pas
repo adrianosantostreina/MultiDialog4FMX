@@ -4,6 +4,7 @@ interface
 
 uses
   MultiDialog4FMX.Interfaces,
+  MultiDialog4FMX.Queue,
 
   FMX.Types,
   FMX.Forms,
@@ -30,7 +31,8 @@ type
     FCustomIconColor: TAlphaColor;
     FResultCallback: TDialogResultProc;
     // Cada plataforma implementa sua exibição
-    procedure InternalShow(const AForm: TCommonCustomForm); virtual; abstract;
+    procedure EnqueueSnapshot(const AForm: TCommonCustomForm;
+      const ASnapshot: TDialogSnapshot); virtual;
     function ResolveParentForm(const AForm: TCommonCustomForm): TCommonCustomForm;
   public
     constructor Create;
@@ -170,14 +172,33 @@ end;
 
 function TDialogBase.Show: IDialogBuilder;
 begin
-  InternalShow(ResolveParentForm(nil));
-  Result := Self;
+  Result := Show(nil);
 end;
 
 function TDialogBase.Show(const AForm: TCommonCustomForm): IDialogBuilder;
+var
+  LForm: TCommonCustomForm;
+  LSnapshot: TDialogSnapshot;
 begin
-  InternalShow(ResolveParentForm(AForm));
+  LForm := ResolveParentForm(AForm);
+  if not Assigned(LForm) then
+    raise Exception.Create('Nenhum formul'#225'rio dispon'#237'vel para exibir o di'#225'logo.');
+  if FButtonHandlers.Count < 1 then
+    raise Exception.Create('O n'#250'mero m'#237'nimo de bot'#245'es '#233' 1.');
+  if FButtonHandlers.Count > 4 then
+    raise Exception.Create(C_MaxButtonsMsg);
+
+  LSnapshot := TDialogSnapshot.Create(LForm, FTitle, FMessage, FMsgType, FCancelable,
+    FFontSize, FBorderRadius, FAnimation, FTheme, FCustomSVG, FCustomIconColor,
+    FResultCallback, FButtonHandlers);
+  EnqueueSnapshot(LForm, LSnapshot);
   Result := Self;
+end;
+
+procedure TDialogBase.EnqueueSnapshot(const AForm: TCommonCustomForm;
+  const ASnapshot: TDialogSnapshot);
+begin
+  TDialogQueueManager.Instance.Enqueue(AForm, ASnapshot);
 end;
 
 { TDialogButtonsBuilder }

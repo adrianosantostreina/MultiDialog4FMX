@@ -5,6 +5,7 @@ interface
 uses
   MultiDialog4FMX.Base,
   MultiDialog4FMX.Interfaces,
+  MultiDialog4FMX.Queue,
   FMX.Forms,
   FMX.Types,
   System.Classes,
@@ -21,7 +22,8 @@ type
     FShowCalled: Boolean;
     FLastParentForm: TCommonCustomForm;
   protected
-    procedure InternalShow(const AForm: TCommonCustomForm); override;
+    procedure EnqueueSnapshot(const AForm: TCommonCustomForm;
+      const ASnapshot: TDialogSnapshot); override;
   public
     constructor Create;
     
@@ -72,11 +74,12 @@ begin
   Reset;
 end;
 
-procedure TMockDialogBase.InternalShow(const AForm: TCommonCustomForm);
+procedure TMockDialogBase.EnqueueSnapshot(const AForm: TCommonCustomForm;
+  const ASnapshot: TDialogSnapshot);
 begin
   FShowCalled := True;
   FLastParentForm := AForm;
-  // Don't create any UI components
+  ASnapshot.Free; // nao enfileira de verdade — evita tocar no TDialogQueueManager real
 end;
 
 procedure TMockDialogBase.Reset;

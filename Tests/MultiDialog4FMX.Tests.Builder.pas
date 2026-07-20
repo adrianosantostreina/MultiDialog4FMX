@@ -44,7 +44,7 @@ type
     procedure TestButtonsEnd_ReturnsDialogBuilder;
 
     [Test]
-    procedure TestShow_CallsInternalShow;
+    procedure TestShow_EnqueuesSnapshot;
 
     [Test]
     procedure TestSetType_StoresValue;
@@ -167,7 +167,7 @@ begin
   Assert.IsNotNull(DialogBuilder);
 end;
 
-procedure TDialogBuilderTests.TestShow_CallsInternalShow;
+procedure TDialogBuilderTests.TestShow_EnqueuesSnapshot;
 begin
   FDialog.Reset;
   FDialog.Buttons.AddButton('OK').&End.Show;
