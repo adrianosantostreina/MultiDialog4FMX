@@ -14,41 +14,7 @@ uses
   System.UITypes,
   System.Generics.Collections;
 
-const
-  C_MaxButtonsMsg = 'O di'#225'logo suporta no m'#225'ximo 4 bot'#245'es.';
-
 type
-  // Guarda texto + handler click ou tap
-  TButtonHandler = class
-  private
-    class var FInstanceCount: Integer;
-  private
-    FText: string;
-    FClickHandler: TNotifyEvent;
-    FTapHandler: TTapEvent;
-    FAnonymousHandler: TProc;
-    FColor: TAlphaColor;
-    FStyleLookup: string;
-    FOverlay: TLayout;
-    FModalResult: TModalResult;
-    FTimeout: Integer;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    class property InstanceCount: Integer read FInstanceCount;
-    property Text: string read FText write FText;
-    property ClickHandler: TNotifyEvent read FClickHandler write FClickHandler;
-    property TapHandler: TTapEvent read FTapHandler write FTapHandler;
-    property AnonymousHandler: TProc read FAnonymousHandler write FAnonymousHandler;
-    property Color: TAlphaColor read FColor write FColor;
-    property StyleLookup: string read FStyleLookup write FStyleLookup;
-    property Overlay: TLayout read FOverlay write FOverlay;
-    property ModalResult: TModalResult read FModalResult write FModalResult;
-    property Timeout: Integer read FTimeout write FTimeout;
-  end;
-  TButtonHandlerList = TObjectList<TButtonHandler>;
-
   TDialogBase = class(TInterfacedObject, IDialogBuilder)
   protected
     FTitle: string;
@@ -103,21 +69,6 @@ type
   end;
 
 implementation
-
-{ TButtonHandler }
-
-constructor TButtonHandler.Create;
-begin
-  inherited;
-  Inc(TButtonHandler.FInstanceCount);
-  FModalResult := mrOk;
-end;
-
-destructor TButtonHandler.Destroy;
-begin
-  Dec(TButtonHandler.FInstanceCount);
-  inherited;
-end;
 
 { TDialogBase }
 
