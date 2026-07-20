@@ -1,10 +1,11 @@
-﻿unit MultiDialog4FMX.FMX;
+unit MultiDialog4FMX.FMX;
 
 interface
 
 uses
   MultiDialog4FMX.Base,
   MultiDialog4FMX.Interfaces,
+  MultiDialog4FMX.Queue,
 
   FMX.Types,
   FMX.Forms,
@@ -24,10 +25,17 @@ uses
   System.Threading;
 
 type
-  TFMXDialog = class(TDialogBase, IDialogBuilder)
+  // Config-only builder — nenhum estado visual vive aqui. TDialogBase.Show ja resolve
+  // form/valida botoes/monta o TDialogSnapshot/chama EnqueueSnapshot; esta classe nao
+  // precisa sobrescrever nada.
+  TFMXDialog = class(TDialogBase, IDialogBuilder);
+
+  TFMXDialogInstance = class(TInterfacedObject, IDialogVisualInstance)
   private
-    FKeepAlive        : IDialogBuilder;
+    FSnapshot         : TDialogSnapshot;
+    FAlive            : Boolean;
     FDialogRect       : TRectangle;
+    FBtnLayout        : TLayout;
     FTimeoutButton    : TFmxObject;
     FTimeoutOrigText  : string;
     FTimeoutRemaining : Integer;
@@ -41,16 +49,12 @@ type
     procedure StartTimeoutCountdown;
     procedure UpdateTimeoutButtonText;
     procedure AutoClickTimeoutButton;
-  protected
-    FBtnLayout: TLayout;
-    procedure InternalShow(const AForm: TCommonCustomForm); override;
     function  CalculateMessageHeight(const AText: string; const AWidth: Single;
                                      const AFont: TFont): Single;
     procedure ButtonClick(Sender: TObject);
     procedure ButtonTap(Sender: TObject; const Point: TPointF);
     procedure OnBackgroundClick(Sender: TObject);
     procedure CloseDialog(AOverlay: TLayout);
-    // Sub-methods extracted from InternalShow (R6+R9)
     function  GetPlatformScale: Single;
     function  BuildOverlay(const AParent: TCommonCustomForm;
                            out ABgRect: TRectangle): TLayout;
@@ -64,6 +68,12 @@ type
                                    const AIconPresent: Boolean): Single;
     procedure PaintColoredBtn(Sender: TObject; Canvas: TCanvas;
                               const ARect: TRectF);
+  public
+    constructor Create(const ASnapshot: TDialogSnapshot);
+    destructor Destroy; override;
+    // IDialogVisualInstance
+    procedure Show;
+    procedure Suppress;
   end;
 
 implementation
@@ -79,7 +89,7 @@ const
   // Numeros separados por espaco (ex. "-.9 .92" em vez de "-.9.92"): dois numeros com ponto
   // decimal colados sem separador (so a troca de sinal/segundo ponto marca a fronteira) faz
   // o parser de TPathData falhar com EConvertError ("X is not a valid floating point value"),
-  // abortando InternalShow antes de CalculateFinalHeight rodar (dialogo fica sem altura,
+  // abortando a montagem antes de CalculateFinalHeight rodar (dialogo fica sem altura,
   // botoes "flutuam" fora da caixa). Espaco extra e um separador SVG valido, geometria identica.
   SVG_QUESTION = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2z' +
                  'm2.07-7.75l-.9 .92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1 .45-2.1 1.17-2.83l1.24-1.26c.37-.36 .59-.86 .59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z';
@@ -97,9 +107,28 @@ const
   C_BaseResponsiveBreak = 600;
   C_BaseTitleFontSize   = 16;
 
-{ TFMXDialog }
+{ TFMXDialogInstance }
 
-function TFMXDialog.ResolveIsDark: Boolean;
+constructor TFMXDialogInstance.Create(const ASnapshot: TDialogSnapshot);
+begin
+  inherited Create;
+  FSnapshot := ASnapshot;
+  FAlive    := True;
+end;
+
+destructor TFMXDialogInstance.Destroy;
+begin
+  FSnapshot.Free;
+  inherited;
+end;
+
+procedure TFMXDialogInstance.Suppress;
+begin
+  FAlive := False;
+  FTimeoutCancelled := True;
+end;
+
+function TFMXDialogInstance.ResolveIsDark: Boolean;
 {$IF CompilerVersion >= 35.0}
 // Delphi 11 Alexandria (CV 35.0) introduziu IFMXSystemAppearanceService/TSystemThemeKind
 // (FMX.Platform). Em <= 10.4 esses identificadores nao existem (E2003), por isso a var
@@ -108,7 +137,7 @@ var
   LSvc: IFMXSystemAppearanceService;
 {$IFEND}
 begin
-  case FTheme of
+  case FSnapshot.Theme of
     dthDark:  Result := True;
     dthLight: Result := False;
   else
@@ -127,7 +156,7 @@ begin
   end;
 end;
 
-function TFMXDialog.GetPlatformScale: Single;
+function TFMXDialogInstance.GetPlatformScale: Single;
 var
   LScreenSvc: IFMXScreenService;
 begin
@@ -136,24 +165,15 @@ begin
     Result := LScreenSvc.GetScreenScale;
 end;
 
-procedure TFMXDialog.InternalShow(const AForm: TCommonCustomForm);
+procedure TFMXDialogInstance.Show;
 var
-  LParent     : TCommonCustomForm;
   LOverlay    : TLayout;
   LDialogRect : TRectangle;
   LBgRect     : TRectangle;
   LBodyLayout : TLayout;
   LIconPresent: Boolean;
 begin
-  LParent := ResolveParentForm(AForm);
-  if not Assigned(LParent) then
-    raise Exception.Create('Nenhum formul'#225'rio dispon'#237'vel para exibir o di'#225'logo.');
-  if FButtonHandlers.Count < 1 then
-    raise Exception.Create('O n'#250'mero m'#237'nimo de bot'#245'es '#233' 1.');
-  if FButtonHandlers.Count > 4 then
-    raise Exception.Create(C_MaxButtonsMsg);
-
-  LOverlay    := BuildOverlay(LParent, LBgRect);
+  LOverlay    := BuildOverlay(FSnapshot.Form, LBgRect);
   LDialogRect := BuildDialogRect(LOverlay);
   BuildButtons(LOverlay, LDialogRect);                         // Bottom — before Client
   BuildHeader(LDialogRect);                                    // Top
@@ -161,14 +181,14 @@ begin
 
   LDialogRect.Height := CalculateFinalHeight(LBodyLayout, LIconPresent);
 
-  if FCancelable then
+  if FSnapshot.Cancelable then
   begin
     LBgRect.HitTest := True;
     LBgRect.OnClick := OnBackgroundClick;
   end;
 
   // Prepare initial state for entrance animation BEFORE making the dialog visible
-  case FAnimation of
+  case FSnapshot.Animation of
     danFade:
       LOverlay.Opacity := 0;
     danScale:
@@ -178,13 +198,11 @@ begin
     end;
   end;
 
-  FKeepAlive := Self;
-
-  if FAnimation <> TDialogAnimation.danNone then
+  if FSnapshot.Animation <> TDialogAnimation.danNone then
     ApplyEntranceAnimation(LOverlay, LDialogRect);
 end;
 
-function TFMXDialog.BuildOverlay(const AParent: TCommonCustomForm;
+function TFMXDialogInstance.BuildOverlay(const AParent: TCommonCustomForm;
   out ABgRect: TRectangle): TLayout;
 var
   LOverlay: TLayout;
@@ -207,7 +225,7 @@ begin
   Result  := LOverlay;
 end;
 
-function TFMXDialog.BuildDialogRect(const AOverlay: TLayout): TRectangle;
+function TFMXDialogInstance.BuildDialogRect(const AOverlay: TLayout): TRectangle;
 var
   LDialogRect: TRectangle;
 begin
@@ -215,8 +233,8 @@ begin
   LDialogRect.Parent := AOverlay;
   LDialogRect.Align := TAlignLayout.Center;
   LDialogRect.Width := C_BaseDialogWidth;
-  LDialogRect.XRadius := FBorderRadius;
-  LDialogRect.YRadius := FBorderRadius;
+  LDialogRect.XRadius := FSnapshot.BorderRadius;
+  LDialogRect.YRadius := FSnapshot.BorderRadius;
   if ResolveIsDark then
   begin
     LDialogRect.Fill.Color   := $FF2D2D2D;
@@ -234,17 +252,17 @@ begin
   Result := LDialogRect;
 end;
 
-procedure TFMXDialog.BuildHeader(const ADialogRect: TRectangle);
+procedure TFMXDialogInstance.BuildHeader(const ADialogRect: TRectangle);
 var
   LLblTitle: TLabel;
 begin
-  if FTitle = EmptyStr then
+  if FSnapshot.Title = EmptyStr then
     Exit;
 
   LLblTitle := TLabel.Create(ADialogRect);
   LLblTitle.Parent := ADialogRect;
   LLblTitle.Align := TAlignLayout.Top;
-  LLblTitle.Text := FTitle;
+  LLblTitle.Text := FSnapshot.Title;
   LLblTitle.TextSettings.Font.Style := [TFontStyle.fsBold];
   LLblTitle.Margins.Rect := RectF(16, 12, 16, 4);
   LLblTitle.Height := C_BaseTitleHeight;
@@ -259,7 +277,7 @@ begin
   LLblTitle.VertTextAlign := TTextAlign.Center;
 end;
 
-procedure TFMXDialog.BuildBody(const ADialogRect: TRectangle;
+procedure TFMXDialogInstance.BuildBody(const ADialogRect: TRectangle;
   out AIconPresent: Boolean; out ABodyLayout: TLayout);
 var
   LScrollBox    : TVertScrollBox;
@@ -271,7 +289,7 @@ var
   LMsgHeight    : Single;
   LMsgFont      : TFont;
 begin
-  AIconPresent := (FMsgType <> TMultiDialogType.mdtCustom) or (FCustomSVG <> '');
+  AIconPresent := (FSnapshot.MsgType <> TMultiDialogType.mdtCustom) or (FSnapshot.CustomSVG <> '');
 
   LScrollBox := TVertScrollBox.Create(ADialogRect);
   LScrollBox.Parent := ADialogRect;
@@ -300,15 +318,15 @@ begin
     LIconPath.Stroke.Kind := TBrushKind.None;
 
     // --- SVG ---
-    // Um path SVG malformado (customizado via SetCustomIcon, ou um builtin futuro) nao pode
-    // abortar a montagem do dialogo: CalculateFinalHeight (mais abaixo em InternalShow) so
+    // Um path SVG malformado (customizado via SetIcon, ou um builtin futuro) nao pode
+    // abortar a montagem do dialogo: CalculateFinalHeight (mais abaixo em Show) so
     // roda se este metodo completar. Sem o guard, uma excecao aqui deixa o LDialogRect sem
     // altura definida e os botoes (montados antes, em BuildButtons) "flutuam" fora da caixa.
     try
-      if FCustomSVG <> '' then
-        LIconPath.Data.Data := FCustomSVG
+      if FSnapshot.CustomSVG <> '' then
+        LIconPath.Data.Data := FSnapshot.CustomSVG
       else
-        case FMsgType of
+        case FSnapshot.MsgType of
           mdtWarning:      LIconPath.Data.Data := SVG_WARNING;
           mdtError:        LIconPath.Data.Data := SVG_ERROR;
           mdtInformation:  LIconPath.Data.Data := SVG_INFO;
@@ -317,14 +335,14 @@ begin
         end;
     except
       // Degrada para "sem icone" (container 40x40 permanece, so o path fica vazio) em vez
-      // de propagar e interromper InternalShow no meio da montagem.
+      // de propagar e interromper a montagem no meio.
     end;
 
     // --- Cor ---
-    if FCustomIconColor <> TAlphaColor(0) then
-      LIconPath.Fill.Color := FCustomIconColor
+    if FSnapshot.CustomIconColor <> TAlphaColor(0) then
+      LIconPath.Fill.Color := FSnapshot.CustomIconColor
     else
-      case FMsgType of
+      case FSnapshot.MsgType of
         mdtWarning:      LIconPath.Fill.Color := TAlphaColorRec.Gold;
         mdtError:        LIconPath.Fill.Color := TAlphaColorRec.Red;
         mdtInformation:  LIconPath.Fill.Color := TAlphaColorRec.Dodgerblue;
@@ -334,15 +352,15 @@ begin
       end;
   end;
 
-  if FMessage <> EmptyStr then
+  if FSnapshot.Message <> EmptyStr then
   begin
     LblMsg := TLabel.Create(LBodyLayout);
     LblMsg.Parent := LBodyLayout;
     LblMsg.Align := TAlignLayout.Client;
     LblMsg.WordWrap := True;
-    LblMsg.Text := FMessage;
+    LblMsg.Text := FSnapshot.Message;
     LblMsg.VertTextAlign := TTextAlign.Leading;
-    LblMsg.TextSettings.Font.Size := FFontSize;
+    LblMsg.TextSettings.Font.Size := FSnapshot.FontSize;
     if ResolveIsDark then
     begin
       LblMsg.StyledSettings := [TStyledSetting.Style];
@@ -359,8 +377,8 @@ begin
 
   LMsgFont := TFont.Create;
   try
-    LMsgFont.Size := FFontSize;
-    LMsgHeight := CalculateMessageHeight(FMessage, LMsgWidth, LMsgFont);
+    LMsgFont.Size := FSnapshot.FontSize;
+    LMsgHeight := CalculateMessageHeight(FSnapshot.Message, LMsgWidth, LMsgFont);
   finally
     LMsgFont.Free;
   end;
@@ -373,7 +391,7 @@ begin
   ABodyLayout := LBodyLayout;
 end;
 
-procedure TFMXDialog.BuildButtons(const AOverlay: TLayout;
+procedure TFMXDialogInstance.BuildButtons(const AOverlay: TLayout;
   const ADialogRect: TRectangle);
 const
   // Box width (300) minus box padding (4+4) minus row margins (4+4) = 284 dp usable width.
@@ -407,7 +425,7 @@ begin
   FBtnLayout := LBtnLayout;
 
   // Responsive: 4 buttons in portrait — 3+1 layout (3 buttons row 1, 1 full-width row 2)
-  LIsResponsive := (FButtonHandlers.Count = 4) and (Screen.Width < Screen.Height) and
+  LIsResponsive := (FSnapshot.Buttons.Count = 4) and (Screen.Width < Screen.Height) and
                    (Screen.Width < C_BaseResponsiveBreak);
 
   if LIsResponsive then
@@ -415,10 +433,10 @@ begin
     LBtnLayout.Height := C_BaseButtonsHeight * 2;
     LWidthButtons := Round(C_BaseDialogWidth / 3) - 16;  // = 84 dp (3×84+2×8=268 dp)
   end
-  else if FButtonHandlers.Count = 1 then
+  else if FSnapshot.Buttons.Count = 1 then
     LWidthButtons := C_BaseDialogWidth - 32
   else
-    LWidthButtons := Round(C_BaseDialogWidth / FButtonHandlers.Count) - 24;
+    LWidthButtons := Round(C_BaseDialogWidth / FSnapshot.Buttons.Count) - 24;
 
   LVOffset := (C_BaseButtonsHeight - C_BaseBtnHeight) / 2;  // = 8 dp
 
@@ -426,8 +444,8 @@ begin
   if LIsResponsive then
     LRowTotalW := 3 * LWidthButtons + 2 * C_BtnGap            // row 1 = 3 buttons
   else
-    LRowTotalW := FButtonHandlers.Count * LWidthButtons +
-                  (FButtonHandlers.Count - 1) * C_BtnGap;
+    LRowTotalW := FSnapshot.Buttons.Count * LWidthButtons +
+                  (FSnapshot.Buttons.Count - 1) * C_BtnGap;
   LCurX := (C_RowInnerWidth - LRowTotalW) / 2;
   LCurY := LVOffset;
 
@@ -436,9 +454,9 @@ begin
   FTimeoutRemaining := 0;
   FTimeoutCancelled := False;
 
-  for I := 0 to FButtonHandlers.Count - 1 do
+  for I := 0 to FSnapshot.Buttons.Count - 1 do
   begin
-    LRec := FButtonHandlers[I];
+    LRec := FSnapshot.Buttons[I];
 
     if LIsResponsive and (I = 3) then
     begin
@@ -495,7 +513,7 @@ begin
       LBtn.Parent     := LBtnLayout;
       LBtn.Align      := TAlignLayout.None;
       LBtn.Text       := LRec.Text;
-      LBtn.TextSettings.Font.Size := FFontSize;
+      LBtn.TextSettings.Font.Size := FSnapshot.FontSize;
       LBtn.StyledSettings := [TStyledSetting.Style];
       LBtn.Height     := C_BaseBtnHeight;
       LBtn.Width      := LCurrentWidth;
@@ -534,14 +552,14 @@ begin
     StartTimeoutCountdown;
 end;
 
-function TFMXDialog.CalculateFinalHeight(const ABodyLayout: TLayout;
+function TFMXDialogInstance.CalculateFinalHeight(const ABodyLayout: TLayout;
   const AIconPresent: Boolean): Single;
 var
   LMaxScreenHeight: Single;
 begin
   Result := ABodyLayout.Height + 16 + FBtnLayout.Height + C_BasePaddingHeight;
 
-  if FTitle <> EmptyStr then
+  if FSnapshot.Title <> EmptyStr then
     Result := Result + C_BaseTitleHeight + 16;
 
   Result := Max(Result, C_BaseMinDialogHeight);
@@ -551,7 +569,7 @@ begin
     Result := LMaxScreenHeight;
 end;
 
-function TFMXDialog.CalculateMessageHeight(const AText: string;
+function TFMXDialogInstance.CalculateMessageHeight(const AText: string;
   const AWidth: Single; const AFont: TFont): Single;
 var
   Layout: TTextLayout;
@@ -576,12 +594,13 @@ begin
   end;
 end;
 
-procedure TFMXDialog.CloseDialog(AOverlay: TLayout);
+procedure TFMXDialogInstance.CloseDialog(AOverlay: TLayout);
 var
   I           : Integer;
   LChild      : TFmxObject;
-  LKeepAlive  : IDialogBuilder;
   LDialogRect : TRectangle;
+  LSelf       : IDialogVisualInstance; // keeps Self alive until the deferred destroy runs
+  LForm       : TCommonCustomForm;
   LDoDestroy  : TProc;
 begin
   if not Assigned(AOverlay) then
@@ -590,13 +609,13 @@ begin
   FTimeoutCancelled := True;
   FTimeoutButton    := nil;
 
-  LKeepAlive  := FKeepAlive;
-  FKeepAlive  := nil;
+  LSelf       := Self;
   LDialogRect := FDialogRect;
   FDialogRect := nil;
+  LForm       := FSnapshot.Form;
 
   // Nil the overlay reference on each handler.
-  // Handlers are owned by FButtonHandlers (TObjectList OwnsObjects=True) — do NOT free here.
+  // Handlers are owned by FSnapshot.Buttons (TObjectList OwnsObjects=True) — do NOT free here.
   // FMX does NOT free TagObject when destroying controls.
   // Works for both TButton and TRectangle (colored button variant).
   if Assigned(FBtnLayout) then
@@ -613,22 +632,25 @@ begin
 
   LDoDestroy := procedure
   begin
+    if not FAlive then
+      Exit; // form ja foi destruido (Suppress rodou) — overlay/objetos ja podem ter sido liberados
     AOverlay.Parent := nil;
     {$IF DEFINED(ANDROID) OR DEFINED(IOS)}
     AOverlay.DisposeOf;
     {$ELSE}
     AOverlay.Free;
     {$ENDIF}
-    LKeepAlive := nil;
+    TDialogQueueManager.Instance.NotifyClosed(LForm);
+    LSelf := nil;
   end;
 
-  if FAnimation = TDialogAnimation.danNone then
+  if FSnapshot.Animation = TDialogAnimation.danNone then
     LDoDestroy()
   else
     ApplyExitAnimation(AOverlay, LDialogRect, LDoDestroy);
 end;
 
-procedure TFMXDialog.OnBackgroundClick(Sender: TObject);
+procedure TFMXDialogInstance.OnBackgroundClick(Sender: TObject);
 var
   LObj    : TFmxObject;
   LOverlay: TLayout;
@@ -639,8 +661,8 @@ begin
     if LObj is TLayout then
     begin
       LOverlay := TLayout(LObj);
-      if Assigned(FResultCallback) then
-        FResultCallback(mrCancel);
+      if Assigned(FSnapshot.ResultCallback) then
+        FSnapshot.ResultCallback(mrCancel);
       // Defer CloseDialog: destroying the overlay inside a click handler leaves
       // the Win32 message pump in an inconsistent state (mouse capture stuck).
       // ForceQueue schedules execution after the current event returns.
@@ -649,7 +671,7 @@ begin
   end;
 end;
 
-procedure TFMXDialog.ButtonClick(Sender: TObject);
+procedure TFMXDialogInstance.ButtonClick(Sender: TObject);
 var
   Obj     : TButtonHandler;
   LOverlay: TLayout;
@@ -673,15 +695,15 @@ begin
       Obj.AnonymousHandler();
     if Assigned(Obj.TapHandler) then
       Obj.TapHandler(Sender, PointF(0, 0));  // fallback for colored buttons with TapHandler
-    if Assigned(FResultCallback) then
-      FResultCallback(Obj.ModalResult);
+    if Assigned(FSnapshot.ResultCallback) then
+      FSnapshot.ResultCallback(Obj.ModalResult);
   finally
-    Obj.Overlay := nil;   // handler owned by FButtonHandlers — do NOT free
+    Obj.Overlay := nil;   // handler owned by FSnapshot.Buttons — do NOT free
     TThread.ForceQueue(nil, procedure begin CloseDialog(LOverlay); end);
   end;
 end;
 
-procedure TFMXDialog.ButtonTap(Sender: TObject; const Point: TPointF);
+procedure TFMXDialogInstance.ButtonTap(Sender: TObject; const Point: TPointF);
 var
   Obj     : TButtonHandler;
   LOverlay: TLayout;
@@ -699,15 +721,15 @@ begin
   try
     if Assigned(Obj.TapHandler) then
       Obj.TapHandler(Sender, Point);
-    if Assigned(FResultCallback) then
-      FResultCallback(Obj.ModalResult);
+    if Assigned(FSnapshot.ResultCallback) then
+      FSnapshot.ResultCallback(Obj.ModalResult);
   finally
-    Obj.Overlay := nil;   // handler owned by FButtonHandlers — do NOT free
+    Obj.Overlay := nil;   // handler owned by FSnapshot.Buttons — do NOT free
     TThread.ForceQueue(nil, procedure begin CloseDialog(LOverlay); end);
   end;
 end;
 
-procedure TFMXDialog.PaintColoredBtn(Sender: TObject; Canvas: TCanvas;
+procedure TFMXDialogInstance.PaintColoredBtn(Sender: TObject; Canvas: TCanvas;
   const ARect: TRectF);
 var
   LRect : TRectangle;
@@ -729,7 +751,7 @@ begin
 
     // Draw white centered text (Canvas.Fill.Color is used as text color by FillText)
     Canvas.Fill.Color := TAlphaColorRec.White;
-    Canvas.Font.Size  := FFontSize;
+    Canvas.Font.Size  := FSnapshot.FontSize;
     Canvas.FillText(ARect, LRect.TagString, False, 1.0, [], TTextAlign.Center,
                     TTextAlign.Center);
   finally
@@ -739,13 +761,14 @@ end;
 
 { Animações }
 
-procedure TFMXDialog.ApplyEntranceAnimation(const AOverlay: TLayout;
+procedure TFMXDialogInstance.ApplyEntranceAnimation(const AOverlay: TLayout;
   const ADialogRect: TRectangle);
 begin
-  case FAnimation of
+  case FSnapshot.Animation of
     danFade:
       TThread.ForceQueue(nil, procedure
       begin
+        if not FAlive then Exit;
         TAnimator.AnimateFloat(AOverlay, 'Opacity', 1, 0.25);
       end);
 
@@ -762,6 +785,7 @@ begin
       var
         LTargetY: Single;
       begin
+        if not FAlive then Exit;
         LTargetY           := ADialogRect.Position.Y;
         ADialogRect.Align  := TAlignLayout.None;
         ADialogRect.Position.X := (AOverlay.Width  - ADialogRect.Width)  / 2;
@@ -772,7 +796,7 @@ begin
   end;
 end;
 
-procedure TFMXDialog.ApplyExitAnimation(const AOverlay: TLayout;
+procedure TFMXDialogInstance.ApplyExitAnimation(const AOverlay: TLayout;
   const ADialogRect: TRectangle; const AOnComplete: TProc);
 // TFloatAnimation.OnFinish is TNotifyEvent (method pointer) — incompatible with
 // anonymous TProc. We start the visual animations and then fire AOnComplete from
@@ -781,7 +805,7 @@ procedure TFMXDialog.ApplyExitAnimation(const AOverlay: TLayout;
 var
   LDurationMs: Integer;
 begin
-  case FAnimation of
+  case FSnapshot.Animation of
     danFade:
     begin
       TAnimator.AnimateFloat(AOverlay, 'Opacity', 0.0, 0.2);
@@ -828,7 +852,7 @@ end;
 
 { Timeout countdown }
 
-procedure TFMXDialog.StartTimeoutCountdown;
+procedure TFMXDialogInstance.StartTimeoutCountdown;
 begin
   UpdateTimeoutButtonText;  // mostra "(N)" imediatamente
   TThread.CreateAnonymousThread(procedure
@@ -852,28 +876,31 @@ begin
   end).Start;
 end;
 
-procedure TFMXDialog.UpdateTimeoutButtonText;
-var
-  LNewText: string;
+procedure TFMXDialogInstance.UpdateTimeoutButtonText;
 begin
   if not Assigned(FTimeoutButton) then
     Exit;
 
-  LNewText := FTimeoutOrigText + ' (' + FTimeoutRemaining.ToString + ')';
-
   if FTimeoutButton is TButton then
-    TButton(FTimeoutButton).Text := LNewText
+    TButton(FTimeoutButton).Text := FTimeoutOrigText + ' (' + FTimeoutRemaining.ToString + ')'
   else if FTimeoutButton is TRectangle then
   begin
-    TRectangle(FTimeoutButton).TagString := LNewText;
+    TRectangle(FTimeoutButton).TagString := FTimeoutOrigText + ' (' + FTimeoutRemaining.ToString + ')';
     TRectangle(FTimeoutButton).Repaint;
   end;
 end;
 
-procedure TFMXDialog.AutoClickTimeoutButton;
+procedure TFMXDialogInstance.AutoClickTimeoutButton;
 begin
   if Assigned(FTimeoutButton) then
     ButtonClick(FTimeoutButton);
 end;
+
+initialization
+  TDialogQueueManager.RegisterInstanceFactory(
+    function(const ASnapshot: TDialogSnapshot): IDialogVisualInstance
+    begin
+      Result := TFMXDialogInstance.Create(ASnapshot);
+    end);
 
 end.
