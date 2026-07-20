@@ -784,12 +784,19 @@ end;
 
 procedure TFMXDialogInstance.ApplyEntranceAnimation(const AOverlay: TLayout;
   const ADialogRect: TRectangle);
+var
+  LSelf: IDialogVisualInstance; // keeps Self alive until the deferred closure runs — same
+                                 // reasoning as OnBackgroundClick/ButtonClick/ButtonTap/
+                                 // StartTimeoutCountdown: without this, "if not FAlive then
+                                 // Exit" below would itself be a use-after-free if the form
+                                 // is destroyed before this ForceQueue closure runs.
 begin
+  LSelf := Self;
   case FSnapshot.Animation of
     danFade:
       TThread.ForceQueue(nil, procedure
       begin
-        if not FAlive then Exit;
+        if not Assigned(LSelf) or not FAlive then Exit;
         TAnimator.AnimateFloat(AOverlay, 'Opacity', 1, 0.25);
       end);
 
@@ -806,7 +813,7 @@ begin
       var
         LTargetY: Single;
       begin
-        if not FAlive then Exit;
+        if not Assigned(LSelf) or not FAlive then Exit;
         LTargetY           := ADialogRect.Position.Y;
         ADialogRect.Align  := TAlignLayout.None;
         ADialogRect.Position.X := (AOverlay.Width  - ADialogRect.Width)  / 2;
