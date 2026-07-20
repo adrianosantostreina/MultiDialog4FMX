@@ -31,7 +31,7 @@ type
   TFMXDialog = class(TDialogBase, IDialogBuilder);
 
   TFMXDialogInstance = class(TInterfacedObject, IDialogVisualInstance)
-  private
+  protected
     FSnapshot         : TDialogSnapshot;
     FAlive            : Boolean;
     FDialogRect       : TRectangle;

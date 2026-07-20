@@ -482,13 +482,17 @@ uses
 type
   TFakeDialogInstance = class(TInterfacedObject, IDialogVisualInstance)
   private
-    FSnapshot: TDialogSnapshot;
-    FShowCallCount: Integer;
+    class var FNextId: Integer;
+    var
+      FId: Integer;
+      FSnapshot: TDialogSnapshot;
+      FShowCallCount: Integer;
   public
     constructor Create(const ASnapshot: TDialogSnapshot);
     destructor Destroy; override;
     procedure Show;
     procedure Suppress;
+    property Id: Integer read FId;
     property ShowCallCount: Integer read FShowCallCount;
   end;
 
@@ -527,6 +531,8 @@ implementation
 constructor TFakeDialogInstance.Create(const ASnapshot: TDialogSnapshot);
 begin
   inherited Create;
+  Inc(FNextId);
+  FId := FNextId;
   FSnapshot := ASnapshot;
   GLastCreatedInstance := Self;
 end;
@@ -611,17 +617,21 @@ end;
 procedure TDialogQueueManagerTests.TestNotifyClosed_PopsNextFromQueue;
 var
   LForm: TCommonCustomForm;
-  LFirstInstance: TFakeDialogInstance;
+  LFirstId: Integer;
 begin
   LForm := TCommonCustomForm.Create(nil);
   try
     TDialogQueueManager.Instance.Enqueue(LForm, MakeSnapshot(LForm));
-    LFirstInstance := GLastCreatedInstance;
+    LFirstId := GLastCreatedInstance.Id; // capturado ANTES do NotifyClosed — a 1a instancia
+                                          // e liberada dentro dele (FActive.Remove derruba o
+                                          // refcount da interface a zero); guardar so o ponteiro
+                                          // e comparar identidade depois seria UAF (e o alocador
+                                          // do Delphi pode reciclar o endereco pra 2a instancia).
     TDialogQueueManager.Instance.Enqueue(LForm, MakeSnapshot(LForm));
 
     TDialogQueueManager.Instance.NotifyClosed(LForm);
 
-    Assert.AreNotEqual<TObject>(LFirstInstance, TObject(GLastCreatedInstance),
+    Assert.AreNotEqual(LFirstId, GLastCreatedInstance.Id,
       'Uma nova instancia deve ter sido criada para o snapshot enfileirado');
     Assert.AreEqual(1, GLastCreatedInstance.ShowCallCount);
     Assert.AreEqual(0, TDialogQueueManager.Instance.DebugQueueLength(LForm));
@@ -1149,7 +1159,7 @@ type
   TFMXDialog = class(TDialogBase, IDialogBuilder);
 
   TFMXDialogInstance = class(TInterfacedObject, IDialogVisualInstance)
-  private
+  protected
     FSnapshot         : TDialogSnapshot;
     FAlive            : Boolean;
     FDialogRect       : TRectangle;
