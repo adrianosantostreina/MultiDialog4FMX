@@ -28,7 +28,8 @@ uses
   MultiDialog4FMX.Tests.Android in 'MultiDialog4FMX.Tests.Android.pas',
   MultiDialog4FMX.Tests.Desktop in 'MultiDialog4FMX.Tests.Desktop.pas',
   MultiDialog4FMX.Tests.MemoryLeaks in 'MultiDialog4FMX.Tests.MemoryLeaks.pas',
-  MultiDialog4FMX.Tests.Snapshot in 'MultiDialog4FMX.Tests.Snapshot.pas';
+  MultiDialog4FMX.Tests.Snapshot in 'MultiDialog4FMX.Tests.Snapshot.pas',
+  MultiDialog4FMX.Tests.Queue in 'MultiDialog4FMX.Tests.Queue.pas';
 
 {$IFNDEF TESTINSIGHT}
 var
