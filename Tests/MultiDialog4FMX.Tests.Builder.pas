@@ -8,7 +8,8 @@ uses
   MultiDialog4FMX.Interfaces,
   System.SysUtils,
   System.UITypes,
-  FMX.Types;
+  FMX.Types,
+  FMX.Forms;
 
 type
   [TestFixture]
@@ -44,7 +45,7 @@ type
     procedure TestButtonsEnd_ReturnsDialogBuilder;
 
     [Test]
-    procedure TestShow_CallsInternalShow;
+    procedure TestShow_EnqueuesSnapshot;
 
     [Test]
     procedure TestSetType_StoresValue;
@@ -96,6 +97,12 @@ type
 
     [Test]
     procedure TestSetTheme_DefaultIsAuto;
+
+    [Test]
+    procedure TestShow_NoButtons_RaisesException;
+
+    [Test]
+    procedure TestShow_TwoButtonsNoHandler_NoException;
   end;
 
 implementation
@@ -167,11 +174,23 @@ begin
   Assert.IsNotNull(DialogBuilder);
 end;
 
-procedure TDialogBuilderTests.TestShow_CallsInternalShow;
+procedure TDialogBuilderTests.TestShow_EnqueuesSnapshot;
+var
+  LForm: TCommonCustomForm;
 begin
-  FDialog.Reset;
-  FDialog.Buttons.AddButton('OK').&End.Show;
-  Assert.IsTrue(FDialog.ShowCalled);
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    FDialog.Reset;
+    FDialog.Buttons.AddButton('OK').&End.Show(LForm);
+    Assert.IsTrue(FDialog.ShowCalled);
+  finally
+    LForm.Free;
+  end;
 end;
 
 procedure TDialogBuilderTests.TestSetType_StoresValue;
@@ -182,10 +201,21 @@ end;
 
 procedure TDialogBuilderTests.TestShow_ReturnsDialogBuilder;
 var
+  LForm: TCommonCustomForm;
   Result: IDialogBuilder;
 begin
-  Result := FDialog.Buttons.AddButton('OK').&End.Show;
-  Assert.IsNotNull(Result);
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    Result := FDialog.Buttons.AddButton('OK').&End.Show(LForm);
+    Assert.IsNotNull(Result);
+  finally
+    LForm.Free;
+  end;
 end;
 
 procedure TDialogBuilderTests.TestSetFontSize_StoresValue;
@@ -294,6 +324,38 @@ procedure TDialogBuilderTests.TestSetTheme_DefaultIsAuto;
 begin
   Assert.AreEqual(TDialogTheme.dthAuto, FDialog.Theme,
     'Tema padrão deve ser dthAuto após Create');
+end;
+
+procedure TDialogBuilderTests.TestShow_NoButtons_RaisesException;
+begin
+  Assert.WillRaise(
+    procedure
+    begin
+      FDialog.Show;
+    end,
+    Exception);
+end;
+
+procedure TDialogBuilderTests.TestShow_TwoButtonsNoHandler_NoException;
+var
+  LForm: TCommonCustomForm;
+begin
+  if not Assigned(Application) then
+  begin
+    Assert.Pass('Cannot test without Application object');
+    Exit;
+  end;
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    FDialog.Buttons.AddButton('A').AddButton('B');
+    Assert.WillNotRaise(
+      procedure
+      begin
+        FDialog.Show(LForm);
+      end);
+  finally
+    LForm.Free;
+  end;
 end;
 
 initialization

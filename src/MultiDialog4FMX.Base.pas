@@ -4,51 +4,17 @@ interface
 
 uses
   MultiDialog4FMX.Interfaces,
+  MultiDialog4FMX.Queue,
 
   FMX.Types,
   FMX.Forms,
-  FMX.Layouts,
 
   System.Classes,
   System.SysUtils,
   System.UITypes,
   System.Generics.Collections;
 
-const
-  C_MaxButtonsMsg = 'O di'#225'logo suporta no m'#225'ximo 4 bot'#245'es.';
-
 type
-  // Guarda texto + handler click ou tap
-  TButtonHandler = class
-  private
-    class var FInstanceCount: Integer;
-  private
-    FText: string;
-    FClickHandler: TNotifyEvent;
-    FTapHandler: TTapEvent;
-    FAnonymousHandler: TProc;
-    FColor: TAlphaColor;
-    FStyleLookup: string;
-    FOverlay: TLayout;
-    FModalResult: TModalResult;
-    FTimeout: Integer;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    class property InstanceCount: Integer read FInstanceCount;
-    property Text: string read FText write FText;
-    property ClickHandler: TNotifyEvent read FClickHandler write FClickHandler;
-    property TapHandler: TTapEvent read FTapHandler write FTapHandler;
-    property AnonymousHandler: TProc read FAnonymousHandler write FAnonymousHandler;
-    property Color: TAlphaColor read FColor write FColor;
-    property StyleLookup: string read FStyleLookup write FStyleLookup;
-    property Overlay: TLayout read FOverlay write FOverlay;
-    property ModalResult: TModalResult read FModalResult write FModalResult;
-    property Timeout: Integer read FTimeout write FTimeout;
-  end;
-  TButtonHandlerList = TObjectList<TButtonHandler>;
-
   TDialogBase = class(TInterfacedObject, IDialogBuilder)
   protected
     FTitle: string;
@@ -64,7 +30,8 @@ type
     FCustomIconColor: TAlphaColor;
     FResultCallback: TDialogResultProc;
     // Cada plataforma implementa sua exibição
-    procedure InternalShow(const AForm: TCommonCustomForm); virtual; abstract;
+    procedure EnqueueSnapshot(const AForm: TCommonCustomForm;
+      const ASnapshot: TDialogSnapshot); virtual;
     function ResolveParentForm(const AForm: TCommonCustomForm): TCommonCustomForm;
   public
     constructor Create;
@@ -103,21 +70,6 @@ type
   end;
 
 implementation
-
-{ TButtonHandler }
-
-constructor TButtonHandler.Create;
-begin
-  inherited;
-  Inc(TButtonHandler.FInstanceCount);
-  FModalResult := mrOk;
-end;
-
-destructor TButtonHandler.Destroy;
-begin
-  Dec(TButtonHandler.FInstanceCount);
-  inherited;
-end;
 
 { TDialogBase }
 
@@ -219,14 +171,33 @@ end;
 
 function TDialogBase.Show: IDialogBuilder;
 begin
-  InternalShow(ResolveParentForm(nil));
-  Result := Self;
+  Result := Show(nil);
 end;
 
 function TDialogBase.Show(const AForm: TCommonCustomForm): IDialogBuilder;
+var
+  LForm: TCommonCustomForm;
+  LSnapshot: TDialogSnapshot;
 begin
-  InternalShow(ResolveParentForm(AForm));
+  LForm := ResolveParentForm(AForm);
+  if not Assigned(LForm) then
+    raise Exception.Create('Nenhum formul'#225'rio dispon'#237'vel para exibir o di'#225'logo.');
+  if FButtonHandlers.Count < 1 then
+    raise Exception.Create('O n'#250'mero m'#237'nimo de bot'#245'es '#233' 1.');
+  if FButtonHandlers.Count > 4 then
+    raise Exception.Create(C_MaxButtonsMsg);
+
+  LSnapshot := TDialogSnapshot.Create(LForm, FTitle, FMessage, FMsgType, FCancelable,
+    FFontSize, FBorderRadius, FAnimation, FTheme, FCustomSVG, FCustomIconColor,
+    FResultCallback, FButtonHandlers);
+  EnqueueSnapshot(LForm, LSnapshot);
   Result := Self;
+end;
+
+procedure TDialogBase.EnqueueSnapshot(const AForm: TCommonCustomForm;
+  const ASnapshot: TDialogSnapshot);
+begin
+  TDialogQueueManager.Instance.Enqueue(AForm, ASnapshot);
 end;
 
 { TDialogButtonsBuilder }
