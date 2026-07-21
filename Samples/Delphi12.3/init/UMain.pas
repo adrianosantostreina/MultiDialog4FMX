@@ -40,8 +40,10 @@ type
     Button9: TButton;
     Button10: TButton;
     Button11: TButton;
+    Button12: TButton;
     procedure Button10Click(Sender: TObject);
     procedure Button11Click(Sender: TObject);
+    procedure Button12Click(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button1Tap(Sender: TObject; const Point: TPointF);
     procedure Button2Click(Sender: TObject);
@@ -110,6 +112,40 @@ begin
     .Buttons
       .AddButton('Ok', 5)
       .AddButton('Cancelar')
+    .&End
+    .Show;
+end;
+
+procedure TForm3.Button12Click(Sender: TObject);
+begin
+  TMultiDialog4FMX.Dialog
+    .SetType(TMultiDialogType.mdtConfirmation) // Define o ícone
+    .SetTitle('Gravação')
+    .SetMessage('Vamos gravar tudo.')
+    .SetCancelable(True)
+    .Buttons
+      .AddButton('Ok',
+        procedure()
+        begin
+          Label1.Text := 'Graviou.';
+        end
+      ,TAlphaColorRec.Null, 'BtnComumGreen') // ✅ Nova sintaxe limpa sem evento
+    .&End
+    .Show;
+
+  TMultiDialog4FMX.Dialog
+    .SetType(TMultiDialogType.mdtConfirmation) // Define o ícone
+    .SetTitle('Saída')
+    .SetMessage('Confirma saída do sistema?')
+    .SetCancelable(True)
+    .Buttons
+      .AddButton('Sim',
+        procedure()
+        begin
+          Label1.Text := 'Clicou em SIM.';
+        end
+      ,TAlphaColorRec.Null, 'BtnComumGreen') // ✅ Nova sintaxe limpa sem evento
+      .AddButton('Não', TAlphaColorRec.Null, 'BtnComumRed') // ✅ Nova sintaxe limpa sem evento
     .&End
     .Show;
 end;
@@ -207,6 +243,7 @@ begin
     .SetTitle('Aviso Simples')
     .SetMessage('Operação concluída com sucesso.')
     .SetCancelable(True)
+    .SetTheme(dthLight)
     .Buttons
       .AddButton('OK', TAlphaColorRec.Null, 'BtnComumGreen') // ✅ Nova sintaxe limpa sem evento
       .AddButton('Cancelar', TAlphaColorRec.Null, 'BtnComumGray2') // ✅ Nova sintaxe limpa sem evento
