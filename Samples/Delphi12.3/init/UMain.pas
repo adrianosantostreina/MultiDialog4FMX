@@ -11,6 +11,7 @@ uses
   System.UITypes,
   System.Classes,
   System.Variants,
+  System.Threading,
 
   FMX.Types,
   FMX.Controls,
@@ -18,6 +19,7 @@ uses
   FMX.Graphics,
   FMX.Dialogs,
   FMX.Controls.Presentation,
+  FMX.Memo,
   FMX.StdCtrls;
 
 type
@@ -63,6 +65,12 @@ type
     procedure OnTestNullClick(Sender: TObject);
   private
     { Private declarations }
+    // --- Sprint 7 demo (criados em runtime no FormCreate) ---
+    FBtnDemoClose: TButton;
+    FBtnDemoAwait: TButton;
+    FMemoLog: TMemo;
+    procedure DemoCloseClick(Sender: TObject);
+    procedure DemoAwaitClick(Sender: TObject);
   public
     { Public declarations }
     procedure DoClickSim(Sender: TObject);
@@ -360,9 +368,112 @@ begin
     .Show;
 end;
 
+const
+  // Nomes legiveis dos eventos de telemetria, indexados por TDialogEventKind.
+  C_KindNames: array[TDialogEventKind] of string =
+    ('Enqueued', 'Shown', 'ButtonClicked', 'Cancelled', 'TimedOut', 'Closed', 'Suppressed');
+
 procedure TForm3.FormCreate(Sender: TObject);
 begin
-  //
+  // ===== Sprint 7 demo: close programatico + await + telemetria =====
+  FBtnDemoClose := TButton.Create(Self);
+  FBtnDemoClose.Parent := Self;
+  FBtnDemoClose.Position.X := 8;
+  FBtnDemoClose.Position.Y := 744;
+  FBtnDemoClose.Size.Width := 335;
+  FBtnDemoClose.Size.Height := 44;
+  FBtnDemoClose.Size.PlatformDefault := False;
+  FBtnDemoClose.Text := 'Sprint7: Close por handle (2s)';
+  FBtnDemoClose.OnClick := DemoCloseClick;
+
+  FBtnDemoAwait := TButton.Create(Self);
+  FBtnDemoAwait.Parent := Self;
+  FBtnDemoAwait.Position.X := 8;
+  FBtnDemoAwait.Position.Y := 792;
+  FBtnDemoAwait.Size.Width := 335;
+  FBtnDemoAwait.Size.Height := 44;
+  FBtnDemoAwait.Size.PlatformDefault := False;
+  FBtnDemoAwait.Text := 'Sprint7: ShowAndWait (TTask)';
+  FBtnDemoAwait.OnClick := DemoAwaitClick;
+
+  FMemoLog := TMemo.Create(Self);
+  FMemoLog.Parent := Self;
+  FMemoLog.Position.X := 8;
+  FMemoLog.Position.Y := 844;
+  FMemoLog.Size.Width := 335;
+  FMemoLog.Size.Height := 150;
+  FMemoLog.Size.PlatformDefault := False;
+  FMemoLog.ReadOnly := True;
+
+  // Telemetria -> Memo (marshalado para a UI thread; eventos podem vir de worker threads).
+  TMultiDialog4FMX.OnDialogEvent :=
+    procedure(const AInfo: TDialogEventInfo)
+    var
+      LMsg: string;
+    begin
+      LMsg := Format('%s | "%s" | r=%d | %dms',
+        [C_KindNames[AInfo.Kind], AInfo.Title, AInfo.Result, AInfo.ElapsedMs]);
+      TThread.Queue(nil,
+        procedure
+        begin
+          FMemoLog.Lines.Add(LMsg);
+        end);
+    end;
+end;
+
+procedure TForm3.DemoCloseClick(Sender: TObject);
+var
+  LHandle: IDialogHandle;
+begin
+  LHandle := TMultiDialog4FMX.Dialog
+    .SetType(TMultiDialogType.mdtInformation)
+    .SetTitle('Close program'#225'tico')
+    .SetMessage('Este di'#225'logo fecha sozinho em 2 segundos via IDialogHandle.Close(mrCancel).')
+    .Buttons
+      .AddButton('Aguarde...')
+    .&End
+    .ShowGetHandle;
+
+  // Agenda o fechamento por codigo apos 2s. LHandle (interface) e capturado pelo
+  // closure -> mantido vivo ate o fechamento.
+  TThread.CreateAnonymousThread(
+    procedure
+    begin
+      Sleep(2000);
+      TThread.Queue(nil,
+        procedure
+        begin
+          if LHandle.IsActive then
+            LHandle.Close(mrCancel);
+        end);
+    end).Start;
+end;
+
+procedure TForm3.DemoAwaitClick(Sender: TObject);
+begin
+  // ShowAndWait BLOQUEIA a thread chamadora ate o dialogo resolver — por isso roda
+  // dentro de um TTask (worker thread), nunca na main thread (levantaria
+  // EDialogAwaitOnMainThread).
+  TTask.Run(
+    procedure
+    var
+      LRes: TModalResult;
+    begin
+      LRes := TMultiDialog4FMX.Dialog
+        .SetType(TMultiDialogType.mdtQuestion)
+        .SetTitle('Await')
+        .SetMessage('ShowAndWait rodando numa worker thread (TTask). Escolha uma op'#231#227'o.')
+        .Buttons
+          .AddButton('Sim', TAlphaColorRec.Null, '', mrYes)
+          .AddButton('N'#227'o', TAlphaColorRec.Null, '', mrNo)
+        .&End
+        .ShowAndWait;
+      TThread.Queue(nil,
+        procedure
+        begin
+          Label1.Text := 'Await retornou: ' + IntToStr(LRes);
+        end);
+    end);
 end;
 
 procedure TForm3.OnTest1Click(Sender: TObject);
