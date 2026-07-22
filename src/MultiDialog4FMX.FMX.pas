@@ -6,6 +6,7 @@ uses
   MultiDialog4FMX.Base,
   MultiDialog4FMX.Interfaces,
   MultiDialog4FMX.Queue,
+  MultiDialog4FMX.Telemetry,
 
   FMX.Types,
   FMX.Forms,
@@ -129,6 +130,8 @@ procedure TFMXDialogInstance.Suppress;
 begin
   FAlive := False;
   FTimeoutCancelled := True;
+  TDialogTelemetry.Emit(MakeDialogEventInfo(dekSuppressed, FSnapshot, mrNone));
+  DoResolve(mrNone);
 end;
 
 procedure TFMXDialogInstance.DoResolve(const AResult: TModalResult);
@@ -662,6 +665,7 @@ begin
     {$ELSE}
     AOverlay.Free;
     {$ENDIF}
+    TDialogTelemetry.Emit(MakeDialogEventInfo(dekClosed, FSnapshot, mrNone));
     TDialogQueueManager.Instance.NotifyClosed(LForm);
     LSelf := nil;
   end;
@@ -684,6 +688,7 @@ begin
     if LObj is TLayout then
     begin
       LOverlay := TLayout(LObj);
+      TDialogTelemetry.Emit(MakeDialogEventInfo(dekCancelled, FSnapshot, mrCancel));
       DoResolve(mrCancel);
       // Defer CloseDialog: destroying the overlay inside a click handler leaves
       // the Win32 message pump in an inconsistent state (mouse capture stuck).
@@ -723,6 +728,7 @@ begin
       Obj.AnonymousHandler();
     if Assigned(Obj.TapHandler) then
       Obj.TapHandler(Sender, PointF(0, 0));  // fallback for colored buttons with TapHandler
+    TDialogTelemetry.Emit(MakeDialogEventInfo(dekButtonClicked, FSnapshot, Obj.ModalResult));
     DoResolve(Obj.ModalResult);
   finally
     Obj.Overlay := nil;   // handler owned by FSnapshot.Buttons — do NOT free
@@ -751,6 +757,7 @@ begin
   try
     if Assigned(Obj.TapHandler) then
       Obj.TapHandler(Sender, Point);
+    TDialogTelemetry.Emit(MakeDialogEventInfo(dekButtonClicked, FSnapshot, Obj.ModalResult));
     DoResolve(Obj.ModalResult);
   finally
     Obj.Overlay := nil;   // handler owned by FSnapshot.Buttons — do NOT free
@@ -940,6 +947,7 @@ end;
 
 procedure TFMXDialogInstance.AutoClickTimeoutButton;
 begin
+  TDialogTelemetry.Emit(MakeDialogEventInfo(dekTimedOut, FSnapshot, mrNone));
   if Assigned(FTimeoutButton) then
     ButtonClick(FTimeoutButton);
 end;

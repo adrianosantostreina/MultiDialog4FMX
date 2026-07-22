@@ -4,6 +4,7 @@ interface
 
 uses
   MultiDialog4FMX.Interfaces,
+  MultiDialog4FMX.Telemetry,
 
   FMX.Forms,
 
@@ -94,7 +95,20 @@ type
     function DebugQueueLength(const AForm: TCommonCustomForm): Integer;
   end;
 
+function MakeDialogEventInfo(const AKind: TDialogEventKind;
+  const ASnapshot: TDialogSnapshot; const AResult: TModalResult): TDialogEventInfo;
+
 implementation
+
+function MakeDialogEventInfo(const AKind: TDialogEventKind;
+  const ASnapshot: TDialogSnapshot; const AResult: TModalResult): TDialogEventInfo;
+begin
+  Result.Kind := AKind;
+  Result.DialogType := ASnapshot.MsgType;
+  Result.Title := ASnapshot.Title;
+  Result.Result := AResult;
+  Result.ElapsedMs := ASnapshot.ElapsedMs;
+end;
 
 { TDialogSnapshot }
 
@@ -204,12 +218,14 @@ begin
   LInstance := FFactory(ASnapshot);
   FActive.AddOrSetValue(AForm, LInstance);
   LInstance.Show;
+  TDialogTelemetry.Emit(MakeDialogEventInfo(dekShown, ASnapshot, mrNone));
 end;
 
 procedure TDialogQueueManager.Enqueue(const AForm: TCommonCustomForm; const ASnapshot: TDialogSnapshot);
 var
   LQueue: TQueue<TDialogSnapshot>;
 begin
+  TDialogTelemetry.Emit(MakeDialogEventInfo(dekEnqueued, ASnapshot, mrNone));
   EnsureWatched(AForm);
 
   if FActive.ContainsKey(AForm) then

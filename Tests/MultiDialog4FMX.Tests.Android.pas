@@ -114,6 +114,9 @@ type
 
     [Test]
     procedure TestDoResolve_IsIdempotent;
+
+    [Test]
+    procedure TestSuppress_ResolvesWithMrNone;
   end;
 
 implementation
@@ -1038,6 +1041,35 @@ begin
     Instance.DoResolve(mrCancel);
     Instance.DoResolve(mrOk);
     Assert.AreEqual(1, LCount, 'Callback deve disparar no maximo uma vez');
+  finally
+    Instance := nil;
+  end;
+end;
+
+procedure TAndroidDialogCloseTests.TestSuppress_ResolvesWithMrNone;
+var
+  Instance: TFMXDialogInstanceCracker;
+  LButtons: TButtonHandlerList;
+  LResult: TModalResult;
+  LCalled: Boolean;
+begin
+  LResult := mrOk;
+  LCalled := False;
+  LButtons := TButtonHandlerList.Create(True);
+  Instance := TFMXDialogInstanceCracker.Create(
+    TDialogSnapshot.Create(nil, '', '', mdtCustom, False, 14, 12, danNone, dthAuto,
+      '', 0,
+      procedure(const AResult: TModalResult)
+      begin
+        LCalled := True;
+        LResult := AResult;
+      end,
+      LButtons));
+  LButtons.Free;
+  try
+    Instance.Suppress;
+    Assert.IsTrue(LCalled, 'Suppress deve resolver o dialogo (disparar callback)');
+    Assert.AreEqual(mrNone, LResult, 'Suppress deve resolver com mrNone');
   finally
     Instance := nil;
   end;

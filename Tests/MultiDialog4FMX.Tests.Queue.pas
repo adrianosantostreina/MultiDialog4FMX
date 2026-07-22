@@ -6,11 +6,13 @@ uses
   DUnitX.TestFramework,
   MultiDialog4FMX.Queue,
   MultiDialog4FMX.Interfaces,
+  MultiDialog4FMX.Telemetry,
   MultiDialog4FMX.FMX,
   FMX.Forms,
   System.SysUtils,
   System.UITypes,
-  System.Classes;
+  System.Classes,
+  System.Generics.Collections;
 
 type
   // Expõe os membros protected de TFMXDialogInstance (FAlive, FTimeoutCancelled) para o
@@ -60,6 +62,9 @@ type
 
     [Test]
     procedure TestFormDestruction_RealInstanceWithPendingTimeoutThread_NoCrash;
+
+    [Test]
+    procedure TestTelemetry_EnqueueEmitsEnqueuedAndShown;
   end;
 
 var
@@ -296,6 +301,33 @@ begin
   // reporta os testes seguintes" e, na pratica, o sinal observavel de sucesso aqui — nao
   // apenas esta linha.
   Assert.Pass('Sequencia de destruicao do form + trabalho de timeout adiado completou sem crash do processo');
+end;
+
+procedure TDialogQueueManagerTests.TestTelemetry_EnqueueEmitsEnqueuedAndShown;
+var
+  LForm: TCommonCustomForm;
+  LKinds: TList<TDialogEventKind>;
+begin
+  LKinds := TList<TDialogEventKind>.Create;
+  try
+    TDialogTelemetry.OnEvent :=
+      procedure(const AInfo: TDialogEventInfo)
+      begin
+        LKinds.Add(AInfo.Kind);
+      end;
+
+    LForm := TCommonCustomForm.Create(nil);
+    try
+      TDialogQueueManager.Instance.Enqueue(LForm, MakeSnapshot(LForm));
+      Assert.IsTrue(LKinds.IndexOf(dekEnqueued) >= 0, 'deve emitir dekEnqueued');
+      Assert.IsTrue(LKinds.IndexOf(dekShown) >= 0, 'deve emitir dekShown');
+    finally
+      LForm.Free;
+    end;
+  finally
+    TDialogTelemetry.OnEvent := nil;
+    LKinds.Free;
+  end;
 end;
 
 initialization
