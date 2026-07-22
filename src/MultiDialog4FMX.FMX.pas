@@ -78,6 +78,8 @@ type
     // IDialogVisualInstance
     procedure Show;
     procedure Suppress;
+    function SnapshotId: Integer;
+    procedure CloseWith(const AResult: TModalResult);
   end;
 
 implementation
@@ -141,6 +143,20 @@ begin
   FResolved := True;
   if Assigned(FSnapshot.ResultCallback) then
     FSnapshot.ResultCallback(AResult);
+end;
+
+function TFMXDialogInstance.SnapshotId: Integer;
+begin
+  Result := FSnapshot.Id;
+end;
+
+procedure TFMXDialogInstance.CloseWith(const AResult: TModalResult);
+begin
+  if FResolved or not FAlive then
+    Exit;
+  DoResolve(AResult);
+  if Assigned(FOverlay) then
+    CloseDialog(FOverlay);
 end;
 
 function TFMXDialogInstance.ResolveIsDark: Boolean;

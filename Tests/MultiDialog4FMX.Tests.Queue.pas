@@ -27,11 +27,14 @@ type
     FSnapshot: TDialogSnapshot;
     FShowCallCount: Integer;
     FId: Integer;
+    FClosedWith: TModalResult;
   public
     constructor Create(const ASnapshot: TDialogSnapshot);
     destructor Destroy; override;
     procedure Show;
     procedure Suppress;
+    function SnapshotId: Integer;
+    procedure CloseWith(const AResult: TModalResult);
     property ShowCallCount: Integer read FShowCallCount;
     property Id: Integer read FId;
   end;
@@ -65,6 +68,12 @@ type
 
     [Test]
     procedure TestTelemetry_EnqueueEmitsEnqueuedAndShown;
+
+    [Test]
+    procedure TestCloseByHandle_Active_ClosesAndPopsQueue;
+
+    [Test]
+    procedure TestCloseByHandle_Queued_RemovesFromQueue;
   end;
 
 var
@@ -80,6 +89,7 @@ begin
   Inc(FNextId);
   FId := FNextId;
   FSnapshot := ASnapshot;
+  FClosedWith := mrNone;
   GLastCreatedInstance := Self;
 end;
 
@@ -97,6 +107,20 @@ end;
 procedure TFakeDialogInstance.Suppress;
 begin
   // no-op for the fake — the point of this fixture is fila/purga logic, not FAlive.
+end;
+
+function TFakeDialogInstance.SnapshotId: Integer;
+begin
+  Result := FSnapshot.Id;
+end;
+
+procedure TFakeDialogInstance.CloseWith(const AResult: TModalResult);
+begin
+  FClosedWith := AResult;
+  // Simula o fim do ciclo: resolve o callback e avisa o manager (como a instancia real).
+  if Assigned(FSnapshot.ResultCallback) then
+    FSnapshot.ResultCallback(AResult);
+  TDialogQueueManager.Instance.NotifyClosed(FSnapshot.Form);
 end;
 
 { TDialogQueueManagerTests }
@@ -327,6 +351,52 @@ begin
   finally
     TDialogTelemetry.OnEvent := nil;
     LKinds.Free;
+  end;
+end;
+
+procedure TDialogQueueManagerTests.TestCloseByHandle_Active_ClosesAndPopsQueue;
+var
+  LForm: TCommonCustomForm;
+  LActiveId: Integer;
+begin
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    TDialogQueueManager.Instance.Enqueue(LForm, MakeSnapshot(LForm));
+    LActiveId := TDialogQueueManager.Instance.DebugActiveSnapshotId(LForm);
+    Assert.IsTrue(TDialogQueueManager.Instance.IsHandleActive(LForm, LActiveId),
+      'O snapshot ativo deve ser reportado como handle ativo');
+
+    TDialogQueueManager.Instance.CloseByHandle(LForm, LActiveId, mrCancel);
+
+    Assert.IsFalse(TDialogQueueManager.Instance.DebugIsActive(LForm),
+      'Apos CloseByHandle do ativo, nada deve estar ativo (fila vazia)');
+  finally
+    LForm.Free;
+  end;
+end;
+
+procedure TDialogQueueManagerTests.TestCloseByHandle_Queued_RemovesFromQueue;
+var
+  LForm: TCommonCustomForm;
+  LQueuedSnap: TDialogSnapshot;
+  LQueuedId: Integer;
+begin
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    TDialogQueueManager.Instance.Enqueue(LForm, MakeSnapshot(LForm)); // vira ativo
+    LQueuedSnap := MakeSnapshot(LForm);
+    LQueuedId := LQueuedSnap.Id;
+    TDialogQueueManager.Instance.Enqueue(LForm, LQueuedSnap);          // vai pra fila
+    Assert.AreEqual(1, TDialogQueueManager.Instance.DebugQueueLength(LForm));
+
+    TDialogQueueManager.Instance.CloseByHandle(LForm, LQueuedId, mrCancel);
+
+    Assert.AreEqual(0, TDialogQueueManager.Instance.DebugQueueLength(LForm),
+      'Snapshot enfileirado deve ser removido da fila por CloseByHandle');
+    Assert.IsTrue(TDialogQueueManager.Instance.DebugIsActive(LForm),
+      'O dialogo ativo original permanece ativo');
+  finally
+    LForm.Free;
   end;
 end;
 

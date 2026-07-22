@@ -64,6 +64,8 @@ type
     ['{7F1B0A11-4E9A-4C4B-9C4B-2B4E7A0E1F10}']
     procedure Show;
     procedure Suppress;
+    function SnapshotId: Integer;
+    procedure CloseWith(const AResult: TModalResult);
   end;
 
   TDialogInstanceFactory = reference to function(const ASnapshot: TDialogSnapshot): IDialogVisualInstance;
@@ -93,6 +95,11 @@ type
     // not part of the public API surface).
     function DebugIsActive(const AForm: TCommonCustomForm): Boolean;
     function DebugQueueLength(const AForm: TCommonCustomForm): Integer;
+
+    procedure CloseByHandle(const AForm: TCommonCustomForm; const AId: Integer;
+      const AResult: TModalResult);
+    function IsHandleActive(const AForm: TCommonCustomForm; const AId: Integer): Boolean;
+    function DebugActiveSnapshotId(const AForm: TCommonCustomForm): Integer;
   end;
 
 function MakeDialogEventInfo(const AKind: TDialogEventKind;
@@ -298,6 +305,70 @@ begin
     Result := LQueue.Count
   else
     Result := 0;
+end;
+
+procedure TDialogQueueManager.CloseByHandle(const AForm: TCommonCustomForm;
+  const AId: Integer; const AResult: TModalResult);
+var
+  LInstance: IDialogVisualInstance;
+  LQueue: TQueue<TDialogSnapshot>;
+  LTemp: TArray<TDialogSnapshot>;
+  LSnap: TDialogSnapshot;
+  I: Integer;
+begin
+  // 1) e o dialogo ativo deste form?
+  if FActive.TryGetValue(AForm, LInstance) and (LInstance.SnapshotId = AId) then
+  begin
+    LInstance.CloseWith(AResult);
+    Exit;
+  end;
+
+  // 2) esta enfileirado? reconstrua a fila sem o item alvo, resolvendo-o.
+  if FQueues.TryGetValue(AForm, LQueue) then
+  begin
+    LTemp := LQueue.ToArray;
+    LQueue.Clear;
+    for I := 0 to High(LTemp) do
+    begin
+      LSnap := LTemp[I];
+      if LSnap.Id = AId then
+      begin
+        if Assigned(LSnap.ResultCallback) then
+          LSnap.ResultCallback(AResult);
+        TDialogTelemetry.Emit(MakeDialogEventInfo(dekClosed, LSnap, AResult));
+        LSnap.Free;   // nunca virou instancia visual — o manager o possui
+      end
+      else
+        LQueue.Enqueue(LSnap);
+    end;
+  end;
+  // 3) nao encontrado -> ja resolvido -> no-op
+end;
+
+function TDialogQueueManager.IsHandleActive(const AForm: TCommonCustomForm;
+  const AId: Integer): Boolean;
+var
+  LInstance: IDialogVisualInstance;
+  LQueue: TQueue<TDialogSnapshot>;
+  LSnap: TDialogSnapshot;
+begin
+  if FActive.TryGetValue(AForm, LInstance) and (LInstance.SnapshotId = AId) then
+    Exit(True);
+  if FQueues.TryGetValue(AForm, LQueue) then
+    for LSnap in LQueue do
+      if LSnap.Id = AId then
+        Exit(True);
+  Result := False;
+end;
+
+function TDialogQueueManager.DebugActiveSnapshotId(const AForm: TCommonCustomForm): Integer;
+var
+  LInstance: IDialogVisualInstance;
+begin
+  if FActive.TryGetValue(AForm, LInstance) then
+    Result := LInstance.SnapshotId
+  else
+    Result := -1;
 end;
 
 initialization
