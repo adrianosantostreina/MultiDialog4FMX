@@ -76,7 +76,8 @@ type
 implementation
 
 uses
-  MultiDialog4FMX.Await;
+  MultiDialog4FMX.Await,
+  System.SyncObjs;
 
 { TDialogBase }
 
@@ -220,9 +221,65 @@ begin
 end;
 
 function TDialogBase.ShowAndWait(const AForm: TCommonCustomForm): TModalResult;
+var
+  LEvent: TEvent;
+  LResult: TModalResult;
+  LUserCb: TDialogResultProc;
+  LError: TObject;
 begin
   EnsureAwaitNotOnMainThread;
-  Result := mrNone;   // implementacao completa na Task B2
+
+  LResult := mrNone;
+  LError := nil;
+  LUserCb := FResultCallback;   // encadeia o callback do usuario, se houver
+  LEvent := TEvent.Create(nil, True, False, '');   // manual reset, nao sinalizado
+  try
+    TThread.Queue(nil,
+      procedure
+      var
+        LForm: TCommonCustomForm;
+        LSnapshot: TDialogSnapshot;
+      begin
+        try
+          LForm := ResolveParentForm(AForm);
+          if not Assigned(LForm) then
+            raise Exception.Create('Nenhum formul'#225'rio dispon'#237'vel para exibir o di'#225'logo.');
+          if FButtonHandlers.Count < 1 then
+            raise Exception.Create('O n'#250'mero m'#237'nimo de bot'#245'es '#233' 1.');
+          if FButtonHandlers.Count > 4 then
+            raise Exception.Create(C_MaxButtonsMsg);
+
+          LSnapshot := TDialogSnapshot.Create(LForm, FTitle, FMessage, FMsgType,
+            FCancelable, FFontSize, FBorderRadius, FAnimation, FTheme, FCustomSVG,
+            FCustomIconColor,
+            procedure(const R: TModalResult)
+            begin
+              if Assigned(LUserCb) then
+                LUserCb(R);
+              LResult := R;
+              LEvent.SetEvent;
+            end,
+            FButtonHandlers);
+
+          EnqueueSnapshot(LForm, LSnapshot);
+        except
+          on E: Exception do
+          begin
+            LError := Exception(AcquireExceptionObject);
+            LEvent.SetEvent;   // desbloqueia a worker para re-levantar
+          end;
+        end;
+      end);
+
+    LEvent.WaitFor(INFINITE);
+
+    if LError <> nil then
+      raise Exception(LError);   // re-levanta na worker (ownership transferido)
+
+    Result := LResult;
+  finally
+    LEvent.Free;
+  end;
 end;
 
 procedure TDialogBase.EnqueueSnapshot(const AForm: TCommonCustomForm;
