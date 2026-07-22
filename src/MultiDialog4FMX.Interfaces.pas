@@ -52,6 +52,19 @@ type
   TDialogTheme     = (dthAuto, dthLight, dthDark);
   TDialogResultProc = reference to procedure(const AResult: TModalResult);
 
+  TDialogEventKind = (dekEnqueued, dekShown, dekButtonClicked, dekCancelled,
+                      dekTimedOut, dekClosed, dekSuppressed);
+
+  TDialogEventInfo = record
+    Kind: TDialogEventKind;
+    DialogType: TMultiDialogType;
+    Title: string;
+    Result: TModalResult;   // valido em dekButtonClicked/dekClosed; mrNone quando nao aplica
+    ElapsedMs: Int64;        // tempo desde dekEnqueued
+  end;
+
+  TDialogEventProc = reference to procedure(const AInfo: TDialogEventInfo);
+
   IDialogButtonsBuilder = interface;
   /// <summary>
   /// Interface para construção fluente de diálogos.

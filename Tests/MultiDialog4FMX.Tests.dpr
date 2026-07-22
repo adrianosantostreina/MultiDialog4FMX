@@ -18,6 +18,7 @@ uses
   MultiDialog4FMX.Base in '..\src\MultiDialog4FMX.Base.pas',
   MultiDialog4FMX.Queue in '..\src\MultiDialog4FMX.Queue.pas',
   MultiDialog4FMX.FMX in '..\src\MultiDialog4FMX.FMX.pas',
+  MultiDialog4FMX.Telemetry in '..\src\MultiDialog4FMX.Telemetry.pas',
   MultiDialog4FMX.Factory in '..\src\MultiDialog4FMX.Factory.pas',
   MultiDialog4FMX.Android in '..\src\MultiDialog4FMX.Android.pas',
   MultiDialog4FMX.Desktop in '..\src\MultiDialog4FMX.Desktop.pas',
@@ -29,7 +30,8 @@ uses
   MultiDialog4FMX.Tests.Desktop in 'MultiDialog4FMX.Tests.Desktop.pas',
   MultiDialog4FMX.Tests.MemoryLeaks in 'MultiDialog4FMX.Tests.MemoryLeaks.pas',
   MultiDialog4FMX.Tests.Snapshot in 'MultiDialog4FMX.Tests.Snapshot.pas',
-  MultiDialog4FMX.Tests.Queue in 'MultiDialog4FMX.Tests.Queue.pas';
+  MultiDialog4FMX.Tests.Queue in 'MultiDialog4FMX.Tests.Queue.pas',
+  MultiDialog4FMX.Tests.Telemetry in 'MultiDialog4FMX.Tests.Telemetry.pas';
 
 {$IFNDEF TESTINSIGHT}
 var
