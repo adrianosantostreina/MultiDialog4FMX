@@ -40,6 +40,9 @@ type
     FTimeoutOrigText  : string;
     FTimeoutRemaining : Integer;
     FTimeoutCancelled : Boolean;
+    FResolved         : Boolean;
+    FOverlay          : TLayout;
+    procedure DoResolve(const AResult: TModalResult);
     function  ResolveIsDark: Boolean;
     procedure ApplyEntranceAnimation(const AOverlay: TLayout;
                                      const ADialogRect: TRectangle);
@@ -128,6 +131,15 @@ begin
   FTimeoutCancelled := True;
 end;
 
+procedure TFMXDialogInstance.DoResolve(const AResult: TModalResult);
+begin
+  if FResolved then
+    Exit;
+  FResolved := True;
+  if Assigned(FSnapshot.ResultCallback) then
+    FSnapshot.ResultCallback(AResult);
+end;
+
 function TFMXDialogInstance.ResolveIsDark: Boolean;
 {$IF CompilerVersion >= 35.0}
 // Delphi 11 Alexandria (CV 35.0) introduziu IFMXSystemAppearanceService/TSystemThemeKind
@@ -174,6 +186,7 @@ var
   LIconPresent: Boolean;
 begin
   LOverlay    := BuildOverlay(FSnapshot.Form, LBgRect);
+  FOverlay    := LOverlay;
   LDialogRect := BuildDialogRect(LOverlay);
   BuildButtons(LOverlay, LDialogRect);                         // Bottom — before Client
   BuildHeader(LDialogRect);                                    // Top
@@ -671,8 +684,7 @@ begin
     if LObj is TLayout then
     begin
       LOverlay := TLayout(LObj);
-      if Assigned(FSnapshot.ResultCallback) then
-        FSnapshot.ResultCallback(mrCancel);
+      DoResolve(mrCancel);
       // Defer CloseDialog: destroying the overlay inside a click handler leaves
       // the Win32 message pump in an inconsistent state (mouse capture stuck).
       // ForceQueue schedules execution after the current event returns.
@@ -711,8 +723,7 @@ begin
       Obj.AnonymousHandler();
     if Assigned(Obj.TapHandler) then
       Obj.TapHandler(Sender, PointF(0, 0));  // fallback for colored buttons with TapHandler
-    if Assigned(FSnapshot.ResultCallback) then
-      FSnapshot.ResultCallback(Obj.ModalResult);
+    DoResolve(Obj.ModalResult);
   finally
     Obj.Overlay := nil;   // handler owned by FSnapshot.Buttons — do NOT free
     // See OnBackgroundClick for why LSelf must be captured by the closure.
@@ -740,8 +751,7 @@ begin
   try
     if Assigned(Obj.TapHandler) then
       Obj.TapHandler(Sender, Point);
-    if Assigned(FSnapshot.ResultCallback) then
-      FSnapshot.ResultCallback(Obj.ModalResult);
+    DoResolve(Obj.ModalResult);
   finally
     Obj.Overlay := nil;   // handler owned by FSnapshot.Buttons — do NOT free
     // See OnBackgroundClick for why LSelf must be captured by the closure.

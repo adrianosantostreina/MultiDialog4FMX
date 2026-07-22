@@ -111,6 +111,9 @@ type
 
     [Test]
     procedure TestButtonClick_CallbackBeforeClose;
+
+    [Test]
+    procedure TestDoResolve_IsIdempotent;
   end;
 
 implementation
@@ -1009,6 +1012,33 @@ begin
       'ResultCallback deve ser chamado sincronamente (antes do ForceQueue)');
   finally
     LObj.Free;
+    Instance := nil;
+  end;
+end;
+
+procedure TAndroidDialogCloseTests.TestDoResolve_IsIdempotent;
+var
+  Instance: TFMXDialogInstanceCracker;
+  LButtons: TButtonHandlerList;
+  LCount: Integer;
+begin
+  LCount := 0;
+  LButtons := TButtonHandlerList.Create(True);
+  Instance := TFMXDialogInstanceCracker.Create(
+    TDialogSnapshot.Create(nil, '', '', mdtCustom, False, 14, 12, danNone, dthAuto,
+      '', 0,
+      procedure(const AResult: TModalResult)
+      begin
+        Inc(LCount);
+      end,
+      LButtons));
+  LButtons.Free;
+  try
+    Instance.DoResolve(mrOk);
+    Instance.DoResolve(mrCancel);
+    Instance.DoResolve(mrOk);
+    Assert.AreEqual(1, LCount, 'Callback deve disparar no maximo uma vez');
+  finally
     Instance := nil;
   end;
 end;
