@@ -102,6 +102,17 @@ type
     function DebugActiveSnapshotId(const AForm: TCommonCustomForm): Integer;
   end;
 
+  TDialogHandle = class(TInterfacedObject, IDialogHandle)
+  private
+    FForm: TCommonCustomForm;
+    FId: Integer;
+  public
+    constructor Create(const AForm: TCommonCustomForm; const AId: Integer);
+    procedure Close; overload;
+    procedure Close(const AResult: TModalResult); overload;
+    function IsActive: Boolean;
+  end;
+
 function MakeDialogEventInfo(const AKind: TDialogEventKind;
   const ASnapshot: TDialogSnapshot; const AResult: TModalResult): TDialogEventInfo;
 
@@ -369,6 +380,30 @@ begin
     Result := LInstance.SnapshotId
   else
     Result := -1;
+end;
+
+{ TDialogHandle }
+
+constructor TDialogHandle.Create(const AForm: TCommonCustomForm; const AId: Integer);
+begin
+  inherited Create;
+  FForm := AForm;
+  FId := AId;
+end;
+
+procedure TDialogHandle.Close;
+begin
+  Close(mrCancel);
+end;
+
+procedure TDialogHandle.Close(const AResult: TModalResult);
+begin
+  TDialogQueueManager.Instance.CloseByHandle(FForm, FId, AResult);
+end;
+
+function TDialogHandle.IsActive: Boolean;
+begin
+  Result := TDialogQueueManager.Instance.IsHandleActive(FForm, FId);
 end;
 
 initialization

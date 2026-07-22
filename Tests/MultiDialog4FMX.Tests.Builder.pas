@@ -5,7 +5,10 @@ interface
 uses
   DUnitX.TestFramework,
   MultiDialog4FMX.Tests.Mocks,
+  MultiDialog4FMX.Tests.Queue,
   MultiDialog4FMX.Interfaces,
+  MultiDialog4FMX.Queue,
+  MultiDialog4FMX.Util,
   System.SysUtils,
   System.UITypes,
   FMX.Types,
@@ -103,6 +106,9 @@ type
 
     [Test]
     procedure TestShow_TwoButtonsNoHandler_NoException;
+
+    [Test]
+    procedure TestShowGetHandle_CloseResolvesMrCancel;
   end;
 
 implementation
@@ -353,6 +359,41 @@ begin
       begin
         FDialog.Show(LForm);
       end);
+  finally
+    LForm.Free;
+  end;
+end;
+
+procedure TDialogBuilderTests.TestShowGetHandle_CloseResolvesMrCancel;
+var
+  LForm: TCommonCustomForm;
+  LHandle: IDialogHandle;
+  LResult: TModalResult;
+  LCalled: Boolean;
+begin
+  LResult := mrOk;
+  LCalled := False;
+
+  TDialogQueueManager.RegisterInstanceFactory(
+    function(const ASnapshot: TDialogSnapshot): IDialogVisualInstance
+    begin
+      Result := TFakeDialogInstance.Create(ASnapshot);
+    end);
+
+  LForm := TCommonCustomForm.Create(nil);
+  try
+    LHandle := TMultiDialog4FMX.Dialog
+      .SetOnResult(procedure(const R: TModalResult)
+        begin LCalled := True; LResult := R; end)
+      .Buttons.AddButton('OK').&End
+      .ShowGetHandle(LForm);
+
+    Assert.IsTrue(LHandle.IsActive, 'Handle recem-criado deve estar ativo');
+    LHandle.Close;   // mrCancel
+
+    Assert.IsTrue(LCalled, 'Callback deve ter disparado no Close');
+    Assert.AreEqual(mrCancel, LResult, 'Close() default resolve mrCancel');
+    Assert.IsFalse(LHandle.IsActive, 'Handle nao deve mais estar ativo apos Close');
   finally
     LForm.Free;
   end;

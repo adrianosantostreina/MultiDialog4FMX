@@ -66,6 +66,15 @@ type
   TDialogEventProc = reference to procedure(const AInfo: TDialogEventInfo);
 
   IDialogButtonsBuilder = interface;
+
+  /// <summary>Referencia a um dialogo disparado, para fecha-lo por codigo.</summary>
+  IDialogHandle = interface
+    ['{2C7A9E14-8B3D-4F6A-9E21-5D0C4B8F1A73}']
+    procedure Close; overload;
+    procedure Close(const AResult: TModalResult); overload;
+    function IsActive: Boolean;
+  end;
+
   /// <summary>
   /// Interface para construção fluente de diálogos.
   /// </summary>
@@ -141,6 +150,9 @@ type
     /// Exibe o diálogo em um formulário específico.
     /// </summary>
     function Show(const AForm: TCommonCustomForm): IDialogBuilder; overload;
+
+    /// <summary>Exibe e devolve um handle para fechar o dialogo por codigo.</summary>
+    function ShowGetHandle(const AForm: TCommonCustomForm = nil): IDialogHandle;
   end;
 
   /// <summary>

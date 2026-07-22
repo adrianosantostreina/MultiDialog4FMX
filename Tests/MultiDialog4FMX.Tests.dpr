@@ -22,6 +22,7 @@ uses
   MultiDialog4FMX.Factory in '..\src\MultiDialog4FMX.Factory.pas',
   MultiDialog4FMX.Android in '..\src\MultiDialog4FMX.Android.pas',
   MultiDialog4FMX.Desktop in '..\src\MultiDialog4FMX.Desktop.pas',
+  MultiDialog4FMX.Util in '..\src\MultiDialog4FMX.Util.pas',
   MultiDialog4FMX.Tests.Mocks in 'MultiDialog4FMX.Tests.Mocks.pas',
   MultiDialog4FMX.Tests.Builder in 'MultiDialog4FMX.Tests.Builder.pas',
   MultiDialog4FMX.Tests.Buttons in 'MultiDialog4FMX.Tests.Buttons.pas',

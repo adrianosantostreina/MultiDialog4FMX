@@ -33,6 +33,8 @@ type
     procedure EnqueueSnapshot(const AForm: TCommonCustomForm;
       const ASnapshot: TDialogSnapshot); virtual;
     function ResolveParentForm(const AForm: TCommonCustomForm): TCommonCustomForm;
+    function BuildSnapshot(const AForm: TCommonCustomForm;
+      out AResolvedForm: TCommonCustomForm): TDialogSnapshot;
   public
     constructor Create;
     destructor Destroy; override;
@@ -52,6 +54,7 @@ type
     function Buttons: IDialogButtonsBuilder;
     function Show: IDialogBuilder; overload;
     function Show(const AForm: TCommonCustomForm): IDialogBuilder; overload;
+    function ShowGetHandle(const AForm: TCommonCustomForm = nil): IDialogHandle;
   end;
 
   // Builder aninhado de botões
@@ -174,24 +177,42 @@ begin
   Result := Show(nil);
 end;
 
-function TDialogBase.Show(const AForm: TCommonCustomForm): IDialogBuilder;
-var
-  LForm: TCommonCustomForm;
-  LSnapshot: TDialogSnapshot;
+function TDialogBase.BuildSnapshot(const AForm: TCommonCustomForm;
+  out AResolvedForm: TCommonCustomForm): TDialogSnapshot;
 begin
-  LForm := ResolveParentForm(AForm);
-  if not Assigned(LForm) then
+  AResolvedForm := ResolveParentForm(AForm);
+  if not Assigned(AResolvedForm) then
     raise Exception.Create('Nenhum formul'#225'rio dispon'#237'vel para exibir o di'#225'logo.');
   if FButtonHandlers.Count < 1 then
     raise Exception.Create('O n'#250'mero m'#237'nimo de bot'#245'es '#233' 1.');
   if FButtonHandlers.Count > 4 then
     raise Exception.Create(C_MaxButtonsMsg);
 
-  LSnapshot := TDialogSnapshot.Create(LForm, FTitle, FMessage, FMsgType, FCancelable,
-    FFontSize, FBorderRadius, FAnimation, FTheme, FCustomSVG, FCustomIconColor,
-    FResultCallback, FButtonHandlers);
+  Result := TDialogSnapshot.Create(AResolvedForm, FTitle, FMessage, FMsgType,
+    FCancelable, FFontSize, FBorderRadius, FAnimation, FTheme, FCustomSVG,
+    FCustomIconColor, FResultCallback, FButtonHandlers);
+end;
+
+function TDialogBase.Show(const AForm: TCommonCustomForm): IDialogBuilder;
+var
+  LForm: TCommonCustomForm;
+  LSnapshot: TDialogSnapshot;
+begin
+  LSnapshot := BuildSnapshot(AForm, LForm);
   EnqueueSnapshot(LForm, LSnapshot);
   Result := Self;
+end;
+
+function TDialogBase.ShowGetHandle(const AForm: TCommonCustomForm): IDialogHandle;
+var
+  LForm: TCommonCustomForm;
+  LSnapshot: TDialogSnapshot;
+  LId: Integer;
+begin
+  LSnapshot := BuildSnapshot(AForm, LForm);
+  LId := LSnapshot.Id;
+  EnqueueSnapshot(LForm, LSnapshot);
+  Result := TDialogHandle.Create(LForm, LId);
 end;
 
 procedure TDialogBase.EnqueueSnapshot(const AForm: TCommonCustomForm;
