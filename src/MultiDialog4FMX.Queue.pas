@@ -10,11 +10,16 @@ uses
   System.Classes,
   System.SysUtils,
   System.UITypes,
+  System.Diagnostics,
   System.Generics.Collections;
 
 type
   TDialogSnapshot = class
   private
+    class var FNextId: Integer;
+  private
+    FId: Integer;
+    FStopwatch: TStopwatch;
     FForm: TCommonCustomForm;
     FTitle: string;
     FMessage: string;
@@ -50,6 +55,8 @@ type
     property CustomIconColor: TAlphaColor read FCustomIconColor;
     property ResultCallback: TDialogResultProc read FResultCallback;
     property Buttons: TButtonHandlerList read FButtons;
+    property Id: Integer read FId;
+    function ElapsedMs: Int64;
   end;
 
   IDialogVisualInstance = interface
@@ -103,6 +110,9 @@ var
   LCopy: TButtonHandler;
 begin
   inherited Create;
+  Inc(FNextId);
+  FId := FNextId;
+  FStopwatch := TStopwatch.StartNew;
   FForm            := AForm;
   FTitle           := ATitle;
   FMessage         := AMessage;
@@ -138,6 +148,11 @@ destructor TDialogSnapshot.Destroy;
 begin
   FButtons.Free;
   inherited;
+end;
+
+function TDialogSnapshot.ElapsedMs: Int64;
+begin
+  Result := FStopwatch.ElapsedMilliseconds;
 end;
 
 { TDialogQueueManager }

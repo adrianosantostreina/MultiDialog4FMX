@@ -32,6 +32,9 @@ type
 
     [Test]
     procedure TestDestroy_FreesOwnButtonList;
+
+    [Test]
+    procedure TestSnapshot_HasUniqueIncrementingId;
   end;
 
 implementation
@@ -126,6 +129,31 @@ begin
   LSnapshot.Free;
   Assert.AreEqual(LBefore + 2, TButtonHandler.InstanceCount,
     'Destruir o snapshot deve liberar so as copias dele, nao os originais');
+end;
+
+procedure TDialogSnapshotTests.TestSnapshot_HasUniqueIncrementingId;
+var
+  LButtons: TButtonHandlerList;
+  LA, LB: TDialogSnapshot;
+begin
+  LButtons := TButtonHandlerList.Create(True);
+  try
+    LButtons.Add(TButtonHandler.Create);
+    LA := TDialogSnapshot.Create(nil, '', '', mdtCustom, False, 14, 12,
+      danNone, dthAuto, '', 0, nil, LButtons);
+    LB := TDialogSnapshot.Create(nil, '', '', mdtCustom, False, 14, 12,
+      danNone, dthAuto, '', 0, nil, LButtons);
+    try
+      Assert.AreNotEqual(LA.Id, LB.Id, 'Ids devem ser distintos');
+      Assert.IsTrue(LB.Id > LA.Id, 'Id deve ser crescente');
+      Assert.IsTrue(LA.ElapsedMs >= 0, 'ElapsedMs deve ser nao-negativo');
+    finally
+      LA.Free;
+      LB.Free;
+    end;
+  finally
+    LButtons.Free;
+  end;
 end;
 
 initialization
