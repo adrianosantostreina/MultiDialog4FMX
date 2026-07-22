@@ -312,11 +312,20 @@ begin
 
   // Da a thread em segundo plano (Sleep(1000) dentro do loop) uma chance real de acordar
   // e observar FTimeoutCancelled=True (setado por Suppress) depois que o form (e a
-  // referencia de FActive) ja se foram — a janela exata que o bug original deixava como
-  // use-after-free. CheckSynchronize bombeia TThread.Queue no thread principal, ja que o
-  // host de console do DUnitX nao roda Application.ProcessMessages/HandleMessage.
-  Sleep(1500);
-  CheckSynchronize(500);
+  // referencia de FActive) ja se foram — a janela exata que o bug C1 deixava como
+  // use-after-free. Essa janela e exercitada NA PROPRIA thread: ela le FTimeoutCancelled/
+  // FTimeoutRemaining atraves do keepalive LSelf, sem depender do thread principal.
+  //
+  // NAO chamamos CheckSynchronize aqui de proposito: apos o cancelamento a thread sai antes
+  // de enfileirar qualquer TThread.Queue, entao nao ha nada DESTE teste para bombear. Um
+  // CheckSynchronize na main thread processaria, em vez disso, closures ForceQueue/Queue
+  // residuais acumuladas por OUTROS fixtures (ex.: os ButtonClick/OnBackgroundClick de
+  // Tests.Android, que fazem TThread.ForceQueue(CloseDialog) e nunca sao bombeados la) —
+  // e uma delas pode deadlockar de forma nao-deterministica conforme o estado do processo
+  // (a mera adicao de um novo fixture que roda antes deste bastava para travar
+  // CheckSynchronize indefinidamente). Drenar o lixo de sync de terceiros nao e
+  // responsabilidade deste teste; o Sleep abaixo cobre a janela de UAF que ele visa.
+  Sleep(2000);
 
   // Chegar ate aqui sem travar o processo e a evidencia mais forte que um teste em
   // processo unico consegue produzir para esta classe de bug: um AV real na thread em
