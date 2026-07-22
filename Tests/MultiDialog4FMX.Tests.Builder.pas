@@ -8,6 +8,7 @@ uses
   MultiDialog4FMX.Tests.Queue,
   MultiDialog4FMX.Interfaces,
   MultiDialog4FMX.Queue,
+  MultiDialog4FMX.Telemetry,
   MultiDialog4FMX.Util,
   System.SysUtils,
   System.UITypes,
@@ -109,6 +110,9 @@ type
 
     [Test]
     procedure TestShowGetHandle_CloseResolvesMrCancel;
+
+    [Test]
+    procedure TestFacade_OnDialogEvent_RoutesToTelemetry;
   end;
 
 implementation
@@ -396,6 +400,25 @@ begin
     Assert.IsFalse(LHandle.IsActive, 'Handle nao deve mais estar ativo apos Close');
   finally
     LForm.Free;
+  end;
+end;
+
+procedure TDialogBuilderTests.TestFacade_OnDialogEvent_RoutesToTelemetry;
+var
+  LInfo: TDialogEventInfo;
+  LCalled: Boolean;
+begin
+  LCalled := False;
+  TMultiDialog4FMX.OnDialogEvent :=
+    procedure(const AInfo: TDialogEventInfo)
+    begin LCalled := True; end;
+  try
+    LInfo := Default(TDialogEventInfo);
+    LInfo.Kind := dekShown;
+    TDialogTelemetry.Emit(LInfo);   // emitido pelo core -> deve chegar na fachada
+    Assert.IsTrue(LCalled, 'OnDialogEvent da fachada deve receber eventos do core');
+  finally
+    TMultiDialog4FMX.OnDialogEvent := nil;
   end;
 end;
 
