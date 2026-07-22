@@ -55,6 +55,7 @@ type
     function Show: IDialogBuilder; overload;
     function Show(const AForm: TCommonCustomForm): IDialogBuilder; overload;
     function ShowGetHandle(const AForm: TCommonCustomForm = nil): IDialogHandle;
+    function ShowAndWait(const AForm: TCommonCustomForm = nil): TModalResult;
   end;
 
   // Builder aninhado de botões
@@ -73,6 +74,9 @@ type
   end;
 
 implementation
+
+uses
+  MultiDialog4FMX.Await;
 
 { TDialogBase }
 
@@ -213,6 +217,12 @@ begin
   LId := LSnapshot.Id;
   EnqueueSnapshot(LForm, LSnapshot);
   Result := TDialogHandle.Create(LForm, LId);
+end;
+
+function TDialogBase.ShowAndWait(const AForm: TCommonCustomForm): TModalResult;
+begin
+  EnsureAwaitNotOnMainThread;
+  Result := mrNone;   // implementacao completa na Task B2
 end;
 
 procedure TDialogBase.EnqueueSnapshot(const AForm: TCommonCustomForm;

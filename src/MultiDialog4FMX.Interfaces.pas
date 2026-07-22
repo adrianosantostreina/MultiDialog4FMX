@@ -153,6 +153,9 @@ type
 
     /// <summary>Exibe e devolve um handle para fechar o dialogo por codigo.</summary>
     function ShowGetHandle(const AForm: TCommonCustomForm = nil): IDialogHandle;
+
+    /// <summary>Bloqueia a worker thread ate o dialogo resolver; retorna o resultado.</summary>
+    function ShowAndWait(const AForm: TCommonCustomForm = nil): TModalResult;
   end;
 
   /// <summary>
